@@ -13,7 +13,7 @@
 
 /* (CORRECT) */
 create table Course_Packages (
-    package_id integer primary key,
+    package_id serial primary key,
     name text,
     num_free_registrations integer,
     price numeric,
@@ -32,7 +32,7 @@ create table Credit_Cards (
 /* (CORRECT) */
 /* Application specs and functions 3 and 4 seem to imply a one-to-one relationship */
 create table Customers (
-  cust_id integer primary key,
+  cust_id serial primary key,
   address text,
   name text,
   email text,
@@ -42,7 +42,7 @@ create table Customers (
 
 /* (CORRECT) */
 create table Employees (
-  	eid integer primary key,
+  	eid serial primary key,
     address text,
     depart_date date,
     email text,
@@ -130,7 +130,7 @@ create table Full_Time_Instructors (
 
 /* (CORRECT) */
 create table Courses (
-    course_id integer primary key,
+    course_id serial primary key,
     description text,
     duration integer,
     name text not null references Course_Areas,
@@ -156,14 +156,14 @@ create table Course_Offerings (
 
 /* (CORRECT) */
 create table Rooms (
-    rid integer primary key,
+    rid serial primary key,
     seating_capacity integer,
     location text
 );
 
 /* (CORRECT) */
 create table Course_Offering_Sessions (
-    sid integer,
+    sid serial,
     session_date date,
     start_time timestamp,
     end_time timestamp,
@@ -180,7 +180,7 @@ create table Conducts (
         on delete cascade,
   	eid integer,
     name text,
-  	sid integer not null,
+  	sid integer,
   	launch_date date not null,
   	course_id integer not null,
     foreign key(eid, name) references Instructors
