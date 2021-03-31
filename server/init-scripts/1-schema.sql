@@ -1,15 +1,16 @@
-/* This schema follows the template ER diagram from left to right as much as possible.
+/* SQL commands to create application schema */
 
-   The ordering for attributes are in lexographical order and primary and foreign keys are 
-   denoted at the bottom for consistent styling across tables.
-
-   If a table is a combined table between entities, we will have the attributes of the overarching
-   entity in lexographical order, followed by the attributes of the 2nd/3rd/etc.. entity similarly
-   in lexographical order below it.
-
-   Attribute types are subject to change. */
-
-/* Decided to use int data type with auto increment for primary keys */
+/* 
+Additional notes:
+- This schema follows the template ER diagram from left to right as much as possible.
+- The ordering for attributes are in lexographical order and primary and foreign keys are 
+denoted at the bottom for consistent styling across tables.
+- If a table is a combined table between entities, we will have the attributes of the overarching
+entity in lexographical order, followed by the attributes of the 2nd/3rd/etc.. entity similarly
+in lexographical order below it.
+- Attribute types are subject to change.  
+- Decided to use int data type with auto increment for primary keys
+*/
 
 drop table if exists Course_Packages, Credit_Cards, Customers, Employees, Employee_Pay_Slips, Part_Time_Employees, Full_Time_Employees,
     Administrators, Managers, Course_Areas, Instructors, Part_Time_Instructors, Full_Time_Instructors, Courses,
@@ -25,12 +26,6 @@ create table Course_Packages (
     sale_end_date date
 );
 
-insert into Course_Packages(name, num_free_registrations, price, sale_start_date, sale_end_date) values('CS2030', 1, 3.50, '2021-03-24', '2021-04-24');
-insert into Course_Packages(name, num_free_registrations, price, sale_start_date, sale_end_date) values('CS2040', 2, 10.0, '2021-03-24', '2021-05-24');
-insert into Course_Packages(name, num_free_registrations, price, sale_start_date, sale_end_date) values('CS2106', 3, 0.0, '2021-03-24', '2021-06-24');
-insert into Course_Packages(name, num_free_registrations, price, sale_start_date, sale_end_date) values('CS1101S', 4, 20.0, '2021-03-24', '2021-07-24');
-insert into Course_Packages(name, num_free_registrations, price, sale_start_date, sale_end_date) values('CS2103T', 5, 30.0, '2021-03-24', '2021-08-24');
-
 /* (CORRECT) */
 create table Credit_Cards (
   number text primary key,
@@ -38,12 +33,6 @@ create table Credit_Cards (
   from_date date,
   cvv integer
 );
-
-insert into Credit_Cards(number, expiry_date, from_date, cvv) values('4111 1111 1111 1111', '2021-10-10', '2016-10-10', 123);
-insert into Credit_Cards(number, expiry_date, from_date, cvv) values('5500 0000 0000 0004', '2022-09-09', '2017-10-10', 234);
-insert into Credit_Cards(number, expiry_date, from_date, cvv) values('3400 0000 0000 009', '2023-08-08', '2018-10-10', 345);
-insert into Credit_Cards(number, expiry_date, from_date, cvv) values('6011 0000 0000 0004', '2024-07-07', '2019-10-10', 456);
-insert into Credit_Cards(number, expiry_date, from_date, cvv) values('2014 0000 0000 009', '2025-06-06', '2020-10-10', 567);
 
 /* (CORRECT) */
 /* Application specs and functions 3 and 4 seem to imply a one-to-one relationship */
@@ -56,12 +45,6 @@ create table Customers (
   number text unique not null references Credit_Cards
 );
 
-insert into Customers(address, name, email, phone, number) values('123 Road', 'Siddarth', 'siddarth@yahoo.com', 87654321, '4111 1111 1111 1111');
-insert into Customers(address, name, email, phone, number) values('5 Way', 'Gerren', 'gerren@u.nus.edu', 98765432, '5500 0000 0000 0004');
-insert into Customers(address, name, email, phone, number) values('Troll Bridge', 'Fabian', 'fabian@hotmail.com', 99887766, '3400 0000 0000 009');
-insert into Customers(address, name, email, phone, number) values('6 Avenue', 'Kevin', 'kevin@gmail.com', 88993321, '6011 0000 0000 0004');
-insert into Customers(address, name, email, phone, number) values('Jane Street', 'Larry', 'larry@mymail.com', 98723456, '2014 0000 0000 009');
-
 /* (CORRECT) */
 create table Employees (
   	eid serial primary key,
@@ -72,12 +55,6 @@ create table Employees (
     name text,
     phone text
 );
-
-insert into Employees(address, depart_date, email, join_date, name, phone) values('Mountain Boulevard', null, 'emily@gmail.com', '2005-05-17', 'Emily', '67892345');
-insert into Employees(address, depart_date, email, join_date, name, phone) values('Jungle Swamp', '2021-01-01', 'brian@live.com', '2013-08-09', 'Brian', '88112233');
-insert into Employees(address, depart_date, email, join_date, name, phone) values('Mountain Hill', null, 'mabel@gmail.com', '2014-12-25', 'Mabel', '65689231');
-insert into Employees(address, depart_date, email, join_date, name, phone) values('Swamp Jungle', '2010-11-11', 'abel@live.com', '2000-02-06', 'Abel', '88456781');
-insert into Employees(address, depart_date, email, join_date, name, phone) values('Mountain View', null, 'chris@yahoo.com', '2020-03-04', 'Chris', '89672345');
 
 /* (CORRECT) */
 create table Employee_Pay_Slips (
@@ -273,3 +250,4 @@ create table Redeems (
         on delete cascade
 );
 
+/* SQL or PL/pgSQL routines for trigger implementations */
