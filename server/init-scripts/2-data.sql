@@ -1,3 +1,5 @@
+/* SQL Commmands to load data into application */
+
 insert into Course_Packages(name, num_free_registrations, price, sale_start_date, sale_end_date) values('CS2030', 1, 3.50, '2021-03-24', '2021-04-24');
 insert into Course_Packages(name, num_free_registrations, price, sale_start_date, sale_end_date) values('CS2040', 2, 10.0, '2021-03-24', '2021-05-24');
 insert into Course_Packages(name, num_free_registrations, price, sale_start_date, sale_end_date) values('CS2106', 3, 0.0, '2021-03-24', '2021-06-24');
