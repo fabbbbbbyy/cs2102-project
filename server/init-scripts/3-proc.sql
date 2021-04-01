@@ -56,6 +56,23 @@ FOR EACH ROW EXECUTE FUNCTION check_if_invalid_remove_employee();
 /* Function (3) add_customer*/
 
 /* Function (4) update_credit_card*/
+CREATE OR REPLACE PROCEDURE update_credit_card(customer_id INTEGER, credit_card_no TEXT, expiration_date DATE, CVV_code INTEGER)
+AS $$
+DECLARE
+	previous_credit_card_number TEXT;
+BEGIN
+  SELECT number INTO previous_credit_card_number
+  FROM Customers C
+  WHERE C.cust_id = customer_id;
+
+  DELETE FROM Credit_Cards WHERE number = previous_credit_card_number;
+  INSERT INTO Credit_Cards(number, expiry_date, from_date, cvv) VALUES(credit_card_no, expiration_date, CURRENT_DATE, CVV_code);
+
+  UPDATE Customers
+  SET number = credit_card_no
+  WHERE cust_id = customer_id;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (5) add_course*/
 
