@@ -84,7 +84,7 @@ insert into Rooms(seating_capacity) values(900);
 
 
 insert into Course_Offering_Sessions(session_date, start_time_hour, end_time_hour, launch_date, course_id) values('2021-11-24', 10, 12, '2021-01-01', 1);
-insert into Course_Offering_Sessions(session_date, start_time_hour, end_time_hour, launch_date, course_id) values('2021-10-15', 10, 12, '2021-02-01', 2);
+insert into Course_Offering_Sessions(session_date, start_time_hour, end_time_hour, launch_date, course_id) values('2021-11-25', 10, 12, '2021-02-01', 2);
 
 insert into Conducts(rid, instructor_id, course_area_name, sid, launch_date, course_id) values(1, 7, 'Database', 1, '2021-01-01', 1);
 insert into Conducts(rid, instructor_id, course_area_name, sid, launch_date, course_id) values(1, 9, 'Computer Networks', 2, '2021-02-01', 2);
