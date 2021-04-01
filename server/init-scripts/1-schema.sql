@@ -432,3 +432,47 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER full_time_employee_verification
 BEFORE INSERT OR UPDATE ON Full_Time_Employees
 FOR EACH ROW EXECUTE FUNCTION full_time_employee_verification_func();
+
+/* Each instructor can teach at most one course session at any hour */
+CREATE OR REPLACE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour()
+RETURNS TRIGGER AS $$
+DECLARE
+	new_assigned_session_date date;
+    new_assigned_session_start_hour integer;
+    new_assigned_session_duration integer;
+	count_of_conflicting_course_sessions integer;
+BEGIN
+	/*Find new assigned course_session session date and session start_hour*/
+    SELECT session_date, start_time_hour INTO new_assigned_session_date, new_assigned_session_start_hour
+    FROM Course_Offering_Sessions
+    WHERE NEW.sid = sid
+    and NEW.launch_date = launch_date
+    and NEW.course_id = course_id;
+    
+    SELECT duration INTO new_assigned_session_duration
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+    WHERE NEW.course_id = course_id;
+
+    /*
+    Find the number of course_offering_sessions with the same session_date and start_time_hour
+    as the assigned course_session date and course_session 
+    */
+    SELECT count(*) INTO count_of_conflicting_course_sessions
+    FROM Conducts NATURAL JOIN Course_Offering_Sessions
+    WHERE NEW.instructor_id = instructor_id
+    and
+    session_date = new_assigned_session_date
+    and
+    (int8range(new_assigned_session_start_hour, new_assigned_session_start_hour + new_assigned_session_duration) && int8range(start_time_hour, end_time_hour));
+    
+    IF count_of_conflicting_course_sessions >= 1 THEN
+        RAISE EXCEPTION 'Instructor is already teaching another course which conflicts with the period of the new assigned session.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER instructor_cannot_teach_more_than_one_course_session_at_any_hour_trigger
+BEFORE INSERT OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour();
