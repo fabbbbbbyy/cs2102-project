@@ -42,7 +42,7 @@ create table Customers (
   name text,
   email text,
   phone text,
-  number text unique not null references Credit_Cards
+  number text unique not null references Credit_Cards deferrable initially deferred
 );
 
 /* (CORRECT) */
