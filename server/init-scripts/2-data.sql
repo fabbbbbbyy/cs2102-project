@@ -432,3 +432,13 @@ insert into Registers(cust_id, register_date, sid, launch_date, course_id) value
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 3, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(10, '2021-01-02', 3, '2021-01-01', 1);
 
+insert into Buys values(1, 1, '2021-04-02', 5);
+insert into Buys values(2, 1, '2021-04-02', 5);
+insert into Buys values(3, 1, '2021-04-02', 5);
+insert into Buys values(4, 1, '2021-04-02', 5);
+insert into Buys values(5, 2, '2021-04-02', 5);
+insert into Buys values(6, 2, '2021-04-02', 5);
+insert into Buys values(7, 2, '2021-04-02', 5);
+insert into Buys values(8, 3, '2021-04-02', 5);
+insert into Buys values(9, 3, '2021-04-02', 5);
+insert into Buys values(10, 4, '2021-04-02', 5);
