@@ -141,10 +141,10 @@ create table Part_Time_Instructors (
 create table Full_Time_Instructors (
   instructor_id integer references Full_Time_Employees
       on delete cascade,
-  name text,
-  foreign key(instructor_id, name) references Instructors
+  course_area_name text,
+  foreign key(instructor_id, course_area_name) references Instructors
       on delete cascade,
-  primary key(instructor_id, name)
+  primary key(instructor_id, course_area_name)
 );
 
 /* (CORRECT) */
@@ -196,7 +196,7 @@ create table Course_Offering_Sessions (
     foreign key(course_id, launch_date) references Course_Offerings
           on delete cascade,
 
-    check(extract(dow from session_date) not in (0, 6)),
+    check(extract(isodow from session_date) in (1, 2, 3, 4, 5)),
   	check(end_time_hour > start_time_hour)
 );
 
