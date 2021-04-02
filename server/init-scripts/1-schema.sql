@@ -15,6 +15,8 @@ in lexographical order below it.
 drop table if exists Course_Packages, Credit_Cards, Customers, Employees, Employee_Pay_Slips, Part_Time_Employees, Full_Time_Employees,
     Administrators, Managers, Course_Areas, Instructors, Part_Time_Instructors, Full_Time_Instructors, Courses,
     Course_Offerings, Rooms, Course_Offering_Sessions, Conducts, Cancels, Registers, Buys, Redeems cascade;
+  
+set timezone = 'Asia/Singapore';
 
 /* (CORRECT) */
 create table Course_Packages (
