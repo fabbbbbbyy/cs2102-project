@@ -273,3 +273,154 @@ create table Redeems (
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
         on delete cascade
 );
+
+/* SQL commands to create application triggers */
+
+/* Trigger (1) No two sessions for the same course offering can be conducted on the same day and same time (Gerren) */
+CREATE OR REPLACE FUNCTION course_offering_timeslot_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	sessionAlreadyPresent BOOLEAN;
+BEGIN
+	SELECT COUNT(sid) > 0 INTO sessionAlreadyPresent
+  FROM Course_Offering_Sessions
+  WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND session_date = NEW.session_date 
+  AND (int8range(NEW.start_time_hour, new.start_time_hour + new.end_time_hour - new.start_time_hour) && int8range(start_time_hour, end_time_hour));
+  
+  IF sessionAlreadyPresent = TRUE THEN
+  	RAISE EXCEPTION 'There exists a session which is conducted on the same day and time.';
+  ELSE
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER course_offering_timeslot_verification
+BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
+FOR EACH ROW EXECUTE FUNCTION course_offering_timeslot_verification_func();
+
+/* Trigger (2) Start date and end date of course offering is determined by the dates of its earliest and latest sessions (Gerren) */
+CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	earliest_session_date DATE;
+  latest_session_date DATE;
+BEGIN
+  IF (TG_OP = 'DELETE') THEN
+    SELECT MIN(session_date), MAX(session_date) INTO earliest_session_date, latest_session_date
+    FROM Course_Offering_Sessions
+    WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
+    
+  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date
+    WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
+    RETURN OLD;
+  ELSE
+    SELECT MIN(session_date), MAX(session_date) INTO earliest_session_date, latest_session_date
+    FROM Course_Offering_Sessions
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+    
+  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_course_offering_start_end_date
+AFTER INSERT OR DELETE OR UPDATE ON Course_Offering_sessions
+FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
+
+/* Trigger (3) */
+
+/* Trigger (4) */
+
+/* Trigger (5) */
+
+/* Trigger (6) */
+
+/* Trigger (7) Each room can be used to conduct at most one session at any time (Gerren) */
+CREATE OR REPLACE FUNCTION room_overlapping_conduct_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	room_already_taken BOOLEAN;
+  new_session_start INTEGER;
+  new_session_end INTEGER;
+  new_session_date DATE;
+BEGIN
+  SELECT start_time_hour, end_time_hour, session_date INTO new_session_start, new_session_end, new_session_date
+  FROM Course_Offering_Sessions 
+  WHERE sid = NEW.sid AND course_id = NEW.course_id AND launch_date = NEW.launch_date;
+  
+	SELECT COUNT(sid) > 0 INTO room_already_taken
+  FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+  WHERE rid = NEW.rid AND session_date = new_session_date
+  AND (int8range(new_session_start, new_session_start + new_session_end - new_session_start) && int8range(start_time_hour, end_time_hour));
+
+  
+  IF room_already_taken = TRUE THEN
+  	RAISE EXCEPTION 'There exists a session which is conducted in the selected room at the same time';
+  ELSE
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER room_overlapping_conduct_verification
+BEFORE INSERT OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION room_overlapping_conduct_verification_func();
+
+/* Trigger (8) */
+
+/* Trigger (9) */
+
+/* Trigger (10) */
+
+/* Trigger (11) */
+
+/* Trigger (12) */
+
+/* Trigger (13) */
+
+/* Trigger (14) */
+
+/* Trigger (15) Each part-time instructor must not teach more than 30 hours each month (Gerren) */
+CREATE OR REPLACE FUNCTION part_time_instructor_conduct_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	new_session_duration INTEGER;
+  new_session_date DATE;
+	exceedThirtyHours BOOLEAN;
+BEGIN
+  SELECT (end_time_hour - start_time_hour), session_date INTO new_session_duration, new_session_date
+  FROM Course_Offering_Sessions
+  WHERE sid = NEW.sid AND course_id = NEW.course_id AND launch_date = NEW.launch_date;
+  
+  SELECT SUM(end_time_hour - start_time_hour) > (30 - new_session_duration) INTO exceedThirtyHours
+  FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Part_Time_Instructors NATURAL JOIN Course_Offering_Sessions
+  WHERE date_part('month', session_date) = date_part('month', new_session_date);
+  
+  IF exceedThirtyHours = TRUE THEN
+  	RAISE EXCEPTION 'Part-time instructor will exceed 30 hours of teaching in specified month';
+  ELSE
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER part_time_instructor_conduct_verification
+BEFORE INSERT OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
+
+/* Trigger (16) */
+
+/* Trigger (17) */
+
+/* Trigger (18) */
+
+/* Trigger (19) */
+
+/* Trigger (20) */
+
+/* Trigger (21) */
+
+/* Trigger (22) */
