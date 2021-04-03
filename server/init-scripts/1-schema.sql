@@ -426,7 +426,7 @@ FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
 
 /* Trigger (20) */
 
-/* Trigger (21) */
+/* Trigger (21) Trigger that ensures every credit card references at least one customer (Gerren) */
 CREATE OR REPLACE FUNCTION credit_card_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
