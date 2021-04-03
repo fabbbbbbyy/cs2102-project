@@ -38,7 +38,9 @@ create table Credit_Cards (
   /* CVV must be three digit, integer might not be able to save 089 */
   cvv text not null,
   
-  check(expiry_date >= from_date)
+  check(credit_card_num similar to '[0-9]+'),
+  check(expiry_date >= from_date),
+  check(cvv similar to '[0-9]{3}')
 );
 
 /* (CORRECT) */
@@ -155,7 +157,9 @@ create table Courses (
     description text not null,
     title text not null,
     duration integer not null check(duration > 0),
-    course_area_name text not null references Course_Areas  
+    course_area_name text not null references Course_Areas,
+
+    check(duration in (1, 2, 3, 4))  
 );
 
 /* (CORRECT) */
@@ -188,7 +192,7 @@ create table Rooms (
 
 /* (CORRECT) */
 create table Course_Offering_Sessions (
-    sid serial,
+    sid integer not null,
     launch_date date not null,
     course_id integer not null,
     session_date date not null,
@@ -211,7 +215,7 @@ create table Conducts (
     course_area_name text not null,
   	launch_date date not null,
   	course_id integer not null,
-    primary key(rid, instructor_id, sid),
+    primary key(rid, instructor_id, sid, launch_date, course_id),
     foreign key(instructor_id, course_area_name) references Instructors
         on delete cascade,
   	foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
@@ -243,7 +247,8 @@ create table Registers (
   	course_id integer,
     primary key(cust_id, register_date, sid, launch_date, course_id),
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
-  	  	on delete cascade
+  	  	on delete cascade,
+    constraint register_date_before_launch_date check(register_date >= launch_date)
 );
 
 /* (CORRECT) */
@@ -422,5 +427,25 @@ FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
 /* Trigger (20) */
 
 /* Trigger (21) */
+CREATE OR REPLACE FUNCTION credit_card_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  cust_count INTEGER;
+BEGIN
+  SELECT COUNT(cust_id) INTO cust_count
+  FROM Customers
+  WHERE Customers.credit_card_num = NEW.credit_card_num;
+
+  IF (cust_count > 0) THEN
+    RETURN NEW;
+  ELSE
+    RAISE EXCEPTION 'Credit Card is not owned by any Customer.';
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER credit_card_verification
+BEFORE INSERT OR UPDATE ON Credit_Cards
+FOR EACH ROW EXECUTE FUNCTION credit_card_verification_func();
 
 /* Trigger (22) */

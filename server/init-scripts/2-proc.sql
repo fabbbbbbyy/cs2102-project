@@ -9,10 +9,10 @@ CREATE OR REPLACE PROCEDURE add_customer(name TEXT, home_address TEXT, phone_no 
           expiry_date DATE, CVV_code text)
 AS $$
 BEGIN
-    INSERT INTO Credit_Cards(credit_card_num, expiry_date, from_date, cvv)
-    	VALUES (credit_card_no, expiry_date, CURRENT_DATE, CVV_code);
     INSERT INTO Customers(address, name, email, phone_num, credit_card_num)
     	VALUES (home_address, name, email_address, phone_no, credit_card_no);
+    INSERT INTO Credit_Cards(credit_card_num, expiry_date, from_date, cvv)
+    	VALUES (credit_card_no, expiry_date, CURRENT_DATE, CVV_code);
 END;
 $$ LANGUAGE plpgsql;
 
