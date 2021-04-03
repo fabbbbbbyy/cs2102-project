@@ -167,7 +167,7 @@ BEGIN
   IF remaining_seats > 0 THEN
     UPDATE Registers
     SET sid = session_num
-    WHERE Registers.cust_id = input_cust_id;
+    WHERE cust_id = input_cust_id AND course_id = course_identifier AND launch_date = course_launch_date;
   ELSE
   	RAISE EXCEPTION 'Session requested is fully booked.';
   END IF;
