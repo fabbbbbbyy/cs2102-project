@@ -132,16 +132,15 @@ $$ LANGUAGE sql;
 CREATE OR REPLACE PROCEDURE update_course_session(cust_identifer INTEGER, course_identifier INTEGER, course_launch_date DATE, session_num INTEGER)
 AS $$
 DECLARE
+  is_session_present BOOLEAN;
 	current_session_count INTEGER;
 	remaining_seats INTEGER;
-  session_launch_date DATE;
-  session_course_id INTEGER;
   input_cust_id INTEGER := cust_identifer;
 BEGIN
-  SELECT launch_date, course_id INTO session_launch_date, session_course_id
+  SELECT COUNT(*) = 1 INTO is_session_present
   FROM Course_Offering_Sessions
-  WHERE sid = session_num;
-  IF session_launch_date <> course_launch_date OR session_course_id <> course_identifier THEN
+  WHERE course_id = course_identifier AND launch_date = course_launch_date AND sid = session_num;
+  IF is_session_present = FALSE THEN
   	RAISE EXCEPTION 'Session is not present in Course Offering specified.';
   END IF;
     
@@ -155,20 +154,20 @@ BEGIN
 	WITH Sessions_Registers AS (
   	SELECT COUNT(*) AS num_registrations
 		FROM Registers NATURAL JOIN Course_Offering_Sessions
-    WHERE Course_Offering_Sessions.sid = session_num
+    WHERE course_id = course_identifier AND launch_date = course_launch_date AND sid = session_num
   ),
    Sessions_Conducts_Rooms AS (
-  	SELECT SUM(Rooms.seating_capacity) AS session_capacity
+  	SELECT COALESCE(SUM(Rooms.seating_capacity), 0) AS session_capacity
     FROM Conducts NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Rooms
-    WHERE Course_Offering_Sessions.sid = session_num
+    WHERE course_id = course_identifier AND launch_date = course_launch_date AND sid = session_num
   )
   SELECT (
   	(SELECT session_capacity FROM Sessions_Conducts_Rooms) - (SELECT num_registrations FROM Sessions_Registers)
   ) INTO remaining_seats;
   IF remaining_seats > 0 THEN
     UPDATE Registers
-    SET sid = session_num, launch_date = session_launch_date, course_id = session_course_id
-    WHERE Registers.cust_id = input_cust_id;
+    SET sid = session_num
+    WHERE cust_id = input_cust_id AND course_id = course_identifier AND launch_date = course_launch_date;
   ELSE
   	RAISE EXCEPTION 'Session requested is fully booked.';
   END IF;
@@ -195,16 +194,16 @@ BEGIN
   WHERE sid = session_num AND course_id = course_identifier AND launch_date = course_launch_date;
   
   IF isPresent = FALSE THEN
-  	RAISE EXCEPTION 'Invalid Session number.';
+  	RAISE EXCEPTION 'Invalid Session.';
   END IF;
   
 	SELECT start_time_hour, session_date INTO session_start_time, session_start_date
   FROM Course_Offering_Sessions
-  WHERE sid = session_num;
+  WHERE sid = session_num AND course_id = course_identifier AND launch_date = course_launch_date;
   
   SELECT COUNT(*) INTO num_registrations
   FROM Registers
-  WHERE sid = session_num;
+  WHERE sid = session_num AND course_id = course_identifier AND launch_date = course_launch_date;
 	
   IF CURRENT_DATE > session_start_date THEN
   	RAISE EXCEPTION 'Session has already commenced.';
@@ -216,7 +215,7 @@ BEGIN
   
   IF num_registrations = 0 THEN
     DELETE FROM Course_Offering_Sessions
-    WHERE sid = session_num;
+    WHERE sid = session_num AND course_id = course_identifier AND launch_date = course_launch_date;
   ELSE
     RAISE EXCEPTION 'Session has customers registered.';
   END IF;	
