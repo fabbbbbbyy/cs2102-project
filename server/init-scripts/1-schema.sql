@@ -799,3 +799,28 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER ensure_register_date_before_session_date
 BEFORE INSERT OR UPDATE ON Registers
 FOR EACH ROW EXECUTE FUNCTION check_register_date_before_session_date();
+
+/* Trigger (28) Check if redemption date in redeems is earlier than course offering session date */
+CREATE OR REPLACE FUNCTION check_redemption_date_before_session_date()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_session_date DATE;
+BEGIN
+    SELECT session_date INTO course_session_date
+    FROM Course_Offering_Sessions
+    WHERE sid = NEW.sid 
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    /* Assume cannot redeem on the day of sesion itself */
+    IF NEW.redemption_date >= course_session_date THEN
+        RAISE EXCEPTION 'Cannot redeem for a course offering session which is over already.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_redemption_date_before_session_date
+BEFORE INSERT OR UPDATE ON Redeems
+FOR EACH ROW EXECUTE FUNCTION check_redemption_date_before_session_date();
