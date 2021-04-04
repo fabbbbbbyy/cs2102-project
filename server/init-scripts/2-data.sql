@@ -1,12 +1,12 @@
 /* SQL Commmands to load data into application */
-insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 1', 1, 3.50, '2021-03-24', '2021-04-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 1', 1, 150.0, '2021-03-24', '2021-04-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 2', 2, 10.0, '2021-03-24', '2021-05-24');
-insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 3', 3, 0.0, '2021-03-24', '2021-06-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 3', 3, 50.0, '2021-03-24', '2021-06-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 4', 4, 20.0, '2021-03-24', '2021-07-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 5', 5, 30.0, '2021-03-24', '2021-08-24');
-insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 6', 6, 7.50, '2021-03-24', '2021-04-24');
-insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 7', 7, 18.0, '2021-03-24', '2021-05-24');
-insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 8', 8, 0.0, '2021-03-24', '2021-06-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 6', 6, 52.50, '2021-03-24', '2021-04-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 7', 7, 70.0, '2021-03-24', '2021-05-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 8', 8, 55.0, '2021-03-24', '2021-06-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 9', 9, 25.0, '2021-03-24', '2021-07-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 10', 10, 35.0, '2021-03-24', '2021-08-24');
 
@@ -20,6 +20,7 @@ insert into Credit_Cards(credit_card_num, expiry_date, from_date, cvv) values('2
 insert into Credit_Cards(credit_card_num, expiry_date, from_date, cvv) values('2014 2222 3333 009', '2025-06-10', '2020-09-10', '021');
 insert into Credit_Cards(credit_card_num, expiry_date, from_date, cvv) values('2014 1111 3333 009', '2025-06-11', '2020-05-10', '301');
 insert into Credit_Cards(credit_card_num, expiry_date, from_date, cvv) values('2014 2222 2222 009', '2025-06-10', '2020-03-10', '811');
+insert into Credit_Cards(credit_card_num, expiry_date, from_date, cvv) values('2014 2222 1212 009', '2025-07-10', '2020-05-10', '821');
 
 insert into Customers(address, name, email, phone_num, credit_card_num) values('123 Road', 'Siddarth', 'siddarth@yahoo.com', 87654321, '4111 1111 1111 1111');
 insert into Customers(address, name, email, phone_num, credit_card_num) values('5 Way', 'Gerren', 'gerren@u.nus.edu', 98765432, '5500 0000 0000 0004');
@@ -31,6 +32,7 @@ insert into Customers(address, name, email, phone_num, credit_card_num) values('
 insert into Customers(address, name, email, phone_num, credit_card_num) values('Charlie Street', 'Ronaldo', 'ronaldo@mymail.com', 9345123, '2014 2222 3333 009');
 insert into Customers(address, name, email, phone_num, credit_card_num) values('Delta Street', 'Messi', 'messi@mymail.com', 97897890, '2014 1111 3333 009');
 insert into Customers(address, name, email, phone_num, credit_card_num) values('Echo Street', 'Mbappe', 'mbappe@mymail.com', 87778777, '2014 2222 2222 009');
+insert into Customers(address, name, email, phone_num, credit_card_num) values('Foxtrot Street', 'Robben', 'robben@mymail.com', 86668666, '2014 2222 1212 009');
 
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Boulevard', null, 'emily@gmail.com', '2005-05-17', 'Emily', '67892345');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jungle Swamp', null, 'brian@live.com', '2013-08-09', 'Brian', '88112233');
@@ -141,14 +143,14 @@ insert into Managers(eid) values(29);
 insert into Managers(eid) values(30);
 
 insert into Course_Areas(eid, course_area_name) values(21, 'Database Systems');
-insert into Course_Areas(eid, course_area_name) values(22, 'Computer Networks');
-insert into Course_Areas(eid, course_area_name) values(23, 'Operating Systems');
-insert into Course_Areas(eid, course_area_name) values(24, 'Data Structure and Algorithms');
-insert into Course_Areas(eid, course_area_name) values(25, 'Programming Languages');
 insert into Course_Areas(eid, course_area_name) values(21, 'Software Engineering');
+insert into Course_Areas(eid, course_area_name) values(22, 'Computer Networks');
 insert into Course_Areas(eid, course_area_name) values(22, 'Discrete Mathematics');
+insert into Course_Areas(eid, course_area_name) values(23, 'Operating Systems');
 insert into Course_Areas(eid, course_area_name) values(23, 'Statistics');
+insert into Course_Areas(eid, course_area_name) values(24, 'Data Structure and Algorithms');
 insert into Course_Areas(eid, course_area_name) values(24, 'Ethics');
+insert into Course_Areas(eid, course_area_name) values(25, 'Programming Languages');
 insert into Course_Areas(eid, course_area_name) values(25, 'Calculus');
 
 insert into Instructors(instructor_id, course_area_name) values(1, 'Computer Networks');
@@ -218,7 +220,7 @@ insert into Full_Time_Instructors(instructor_id, course_area_name) values(39, 'E
 insert into Full_Time_Instructors(instructor_id, course_area_name) values(40, 'Software Engineering');
 
 insert into Courses(description, title, duration, course_area_name) values('Drop table if exists', 'Introduction to Database Systems', 1, 'Database Systems');
-insert into Courses(description, title, duration, course_area_name) values('IP/TCP', 'Instroduction to Computer Networks', 2, 'Computer Networks');
+insert into Courses(description, title, duration, course_area_name) values('IP/TCP', 'Introduction to Computer Networks', 2, 'Computer Networks');
 insert into Courses(description, title, duration, course_area_name) values('Unix is the best', 'Introduction to Operating Systems', 1, 'Operating Systems');
 insert into Courses(description, title, duration, course_area_name) values('O(1)', 'Introduction to Data Structure and Algorithms', 2, 'Data Structure and Algorithms');
 insert into Courses(description, title, duration, course_area_name) values('Metacircular evaluation', 'Introduction to Programming Languages', 1, 'Programming Languages');
@@ -229,7 +231,7 @@ insert into Courses(description, title, duration, course_area_name) values('Util
 insert into Courses(description, title, duration, course_area_name) values('dy/dx', 'Introduction to Calculus', 2, 'Calculus');
 
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(1, '2021-01-01', 11, '2021-02-01', '2021-03-01', 300, '2021-01-15', 50, 50);
-insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(2, '2021-02-01', 12, '2021-03-01', '2021-04-01', 300, '2021-02-15', 50, 50);
+insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(2, '2021-02-01', 12, '2021-03-01', '2021-04-01', 450, '2021-02-15', 50, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(3, '2021-03-01', 13, '2021-04-01', '2021-05-03', 300, '2021-03-15', 50, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(4, '2021-01-01', 14, '2021-02-01', '2021-03-01', 300, '2021-01-15', 50, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(5, '2021-02-01', 15, '2021-03-01', '2021-04-01', 300, '2021-02-15', 50, 50);
@@ -421,16 +423,23 @@ insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, cou
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 59, 'Calculus', '2021-06-01', 10);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 60, 'Calculus', '2021-06-01', 10);
 
+insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(1, '2021-01-03', 1, '2021-01-01', 1, 0, 300);
+insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(2, '2021-01-03', 1, '2021-01-01', 1, 0, 0);
+insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(8, '2021-05-02', 4, '2021-02-01', 2, 0, 0);
+
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(1, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(2, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(3, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(4, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(5, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-01-02', 2, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-01-02', 2, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-01-02', 2, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 3, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(10, '2021-01-02', 3, '2021-01-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-01-02', 1, '2021-01-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-01-02', 1, '2021-01-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-01-02', 1, '2021-01-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 1, '2021-01-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(10, '2021-01-02', 1, '2021-01-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(11, '2021-01-02', 1, '2021-01-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-06-02', 49, '2021-06-01', 7);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-02-10', 5, '2021-02-01', 2);
 
 insert into Buys values(1, 1, '2021-04-02', 5);
 insert into Buys values(2, 1, '2021-04-02', 5);
@@ -439,6 +448,12 @@ insert into Buys values(4, 1, '2021-04-02', 5);
 insert into Buys values(5, 2, '2021-04-02', 5);
 insert into Buys values(6, 2, '2021-04-02', 5);
 insert into Buys values(7, 2, '2021-04-02', 5);
-insert into Buys values(8, 3, '2021-04-02', 5);
+insert into Buys values(8, 3, '2021-04-02', 0);
+insert into Buys values(8, 7, '2021-04-02', 0);
 insert into Buys values(9, 3, '2021-04-02', 5);
 insert into Buys values(10, 4, '2021-04-02', 5);
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 60, '2021-06-01', 10, 8, 3, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 59, '2021-06-01', 10, 8, 3, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 5, '2021-02-01', 2, 8, 7, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 4, '2021-02-01', 2, 8, 7, '2021-04-02');

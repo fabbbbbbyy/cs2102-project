@@ -342,7 +342,7 @@ FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 CREATE OR REPLACE FUNCTION room_overlapping_conduct_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	room_already_taken BOOLEAN;
+  room_already_taken BOOLEAN;
   new_session_start INTEGER;
   new_session_end INTEGER;
   new_session_date DATE;
@@ -370,12 +370,184 @@ BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION room_overlapping_conduct_verification_func();
 
 /* Trigger (8) */
+CREATE OR REPLACE FUNCTION part_time_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_same_eid_records
+  FROM Full_Time_Employees FTE
+  WHERE FTE.eid = NEW.eid;
+  
+	IF num_same_eid_records > 0 THEN
+  	RAISE EXCEPTION 'This employee is already a full time employee, and therefore cannot be a part time employee.';
+  ELSE 
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER part_time_employee_verification
+BEFORE INSERT OR UPDATE ON Part_Time_Employees
+FOR EACH ROW EXECUTE FUNCTION part_time_employee_verification_func();
+
+CREATE OR REPLACE FUNCTION full_time_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_same_eid_records
+  FROM Part_Time_Employees PTE
+  WHERE PTE.eid = NEW.eid;
+  
+	IF num_same_eid_records > 0 THEN
+  	RAISE EXCEPTION 'This employee is already a part time employee, and therefore cannot be a full time employee.';
+  ELSE 
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER full_time_employee_verification
+BEFORE INSERT OR UPDATE ON Full_Time_Employees
+FOR EACH ROW EXECUTE FUNCTION full_time_employee_verification_func();
 
 /* Trigger (9) */
+CREATE OR REPLACE FUNCTION manager_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_eid_records integer;
+    num_instructor_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_same_eid_records
+    FROM Administrators A
+    WHERE A.eid = NEW.eid;
+
+    SELECT COUNT(*) INTO num_instructor_same_eid_records
+    FROM Instructors
+    WHERE instructor_id = NEW.eid;
+  
+	IF num_same_eid_records > 0 THEN
+  	    RAISE EXCEPTION 'This employee is already an administrator, and therefore cannot be a manager.';
+    END IF;
+    
+    IF num_instructor_same_eid_records > 0 THEN
+        RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be a manager.';
+    END IF; 
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER manager_employee_verification
+BEFORE INSERT OR UPDATE ON Managers
+FOR EACH ROW EXECUTE FUNCTION manager_employee_verification_func();
+
+CREATE OR REPLACE FUNCTION administrator_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_eid_records integer;
+    num_instructor_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_same_eid_records
+    FROM Managers M
+    WHERE M.eid = NEW.eid;
+
+    SELECT COUNT(*) INTO num_instructor_same_eid_records
+    FROM Instructors
+    WHERE instructor_id = NEW.eid;
+  
+	IF num_same_eid_records > 0 THEN
+  	    RAISE EXCEPTION 'This employee is already a manager, and therefore cannot be an administrator.';
+    END IF;
+
+    IF num_instructor_same_eid_records > 0 THEN
+        RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be a administrator.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER administrator_employee_verification
+BEFORE INSERT OR UPDATE ON Administrators
+FOR EACH ROW EXECUTE FUNCTION administrator_employee_verification_func();
+
+CREATE OR REPLACE FUNCTION instructor_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_manager_same_eid_records integer;
+    num_administrator_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_manager_same_eid_records
+    FROM Managers
+    WHERE eid = NEW.instructor_id;
+
+    SELECT COUNT(*) INTO num_administrator_same_eid_records
+    FROM Administrators
+    WHERE eid = NEW.instructor_id;
+  
+	IF num_manager_same_eid_records > 0 THEN
+  	    RAISE EXCEPTION 'This employee is already a manager, and therefore cannot be an instructor.';
+    END IF;
+
+    IF num_administrator_same_eid_records > 0 THEN
+        RAISE EXCEPTION 'This employee is already an administrator, and therefore cannot be an instructor.';
+    END IF;
+  	
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER instructor_employee_verification
+BEFORE INSERT OR UPDATE ON Instructors
+FOR EACH ROW EXECUTE FUNCTION instructor_employee_verification_func();
 
 /* Trigger (10) */
 
 /* Trigger (11) */
+CREATE OR REPLACE FUNCTION check_instructor_is_not_full_time_instructor()
+RETURNS TRIGGER AS $$
+DECLARE
+	count_of_full_time_instr integer;
+BEGIN
+    SELECT count(*) INTO count_of_full_time_instr
+    FROM Full_Time_Instructors
+    WHERE NEW.instructor_id  = instructor_id ;
+  
+    IF count_of_full_time_instr > 0 THEN
+        RAISE EXCEPTION 'This instructor is already a full time instructor, and therefore cannot be a part time instructor.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_instructor_is_not_full_time_instructor_trigger
+BEFORE INSERT OR UPDATE ON Part_Time_Instructors
+FOR EACH ROW EXECUTE FUNCTION check_instructor_is_not_full_time_instructor();
+
+
+CREATE OR REPLACE FUNCTION check_instructor_is_not_part_time_instructor()
+RETURNS TRIGGER AS $$
+DECLARE
+	count_of_full_time_instr integer;
+BEGIN
+	SELECT count(*) INTO count_of_full_time_instr
+    FROM Part_Time_Instructors
+    WHERE NEW.instructor_id = instructor_id ;
+  
+    IF count_of_full_time_instr > 0 THEN
+        RAISE EXCEPTION 'This instructor is already a part time instructor, and therefore cannot be a full time instructor.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_instructor_is_not_part_time_instructor_trigger
+BEFORE INSERT OR UPDATE ON Full_Time_Instructors
+FOR EACH ROW EXECUTE FUNCTION check_instructor_is_not_part_time_instructor();
 
 /* Trigger (12) */
 
