@@ -179,6 +179,7 @@ create table Course_Offerings (
     target_number_registrations integer not null check(target_number_registrations > 0),
     primary key(course_id, launch_date),
   
+    check(start_date >= launch_date),
     check(end_date >= start_date),
   	check(registration_deadline + 10 <= start_date)
 );
@@ -652,13 +653,46 @@ FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
 
 /* Trigger (16) */
 
-/* Trigger (17) */
+/* Trigger (17) Check ensure that start_time, duration and end_time follow time constraints (Siddarth) */
+
 
 /* Trigger (18) */
 
 /* Trigger (19) */
 
-/* Trigger (20) */
+/* Trigger (20) Every course_offering_session needs to exist in conducts relation (Siddarth)*/
+CREATE OR REPLACE FUNCTION check_all_course_offering_session_is_being_conducted()
+RETURNS TRIGGER AS $$
+DECLARE
+    num_of_course_offering_sessions INTEGER;
+    is_every_course_offering_session_conducted BOOLEAN;
+    num_of_conducts INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO num_of_course_offering_sessions
+    FROM Course_Offering_Sessions;
+
+    SELECT COUNT(*) = num_of_course_offering_sessions INTO is_every_course_offering_session_conducted
+    FROM Course_Offering_Sessions C1
+    WHERE EXISTS (
+        SELECT 1
+        FROM Conducts C2
+        WHERE C1.sid = C2.sid
+        and C1.launch_date = C2.launch_date
+        and C1.course_id = C2.course_id
+    );
+
+    IF is_every_course_offering_session_conducted THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'New/updated course offering session is not being conducted. Every course offering sessions needs to be conducted by an instructor.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER check_all_course_offering_session_is_being_conducted_trigger
+AFTER INSERT OR UPDATE ON Course_Offering_Sessions
+DEFERRABLE INITIAlLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_all_course_offering_session_is_being_conducted();
 
 /* Trigger (21) Trigger that ensures every credit card references at least one customer (Gerren) */
 CREATE OR REPLACE FUNCTION credit_card_verification_func() 
@@ -683,3 +717,85 @@ BEFORE INSERT OR UPDATE ON Credit_Cards
 FOR EACH ROW EXECUTE FUNCTION credit_card_verification_func();
 
 /* Trigger (22) */
+
+/* Trigger (23) Ensure register date cannot be later than registration deadline and before launch date of course offering (Siddarth) */
+CREATE OR REPLACE FUNCTION ensure_register_date_earlier_than_registration_deadline()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_offering_registration_deadline DATE;
+    course_offering_launch_date DATE;
+BEGIN
+
+    SELECT registration_deadline, launch_date INTO course_offering_registration_deadline, course_offering_launch_date
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings
+    WHERE sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    IF NEW.register_date > course_offering_registration_deadline THEN
+        RAISE EXCEPTION 'Cannot register for a course offering session as the register date is later than the registration deadline.';
+    ELSIF NEW.register_date < course_offering_launch_date THEN
+        RAISE EXCEPTION 'Cannot register for a course offering session as the register date is earlier than course offering launch date.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verify_register_date_before_registration_deadline
+BEFORE INSERT OR UPDATE ON Registers
+FOR EACH ROW EXECUTE FUNCTION ensure_register_date_earlier_than_registration_deadline();
+
+/* Trigger (24) */
+
+/* Trigger (25) */
+
+/* Trigger (26) Check if end_time_hour - start_time_hour = duration from Courses (Siddarth)*/
+CREATE OR REPLACE FUNCTION ensure_start_and_end_of_course_session_matches_course_duration()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_duration INTEGER;
+    is_course_offering_session_start_and_end_hour_valid BOOLEAN;
+BEGIN
+    SELECT duration INTO course_duration
+    FROM Courses
+    WHERE course_id = NEW.course_id;  
+
+    is_course_offering_session_start_and_end_hour_valid := (NEW.end_time_hour - NEW.start_time_hour) = course_duration;
+
+    IF is_course_offering_session_start_and_end_hour_valid THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'Start and end hour of course offering session does not match course duration.';
+    END IF; 
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_validity_of_start_and_end_hour_of_course_session
+BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
+FOR EACH ROW EXECUTE FUNCTION ensure_start_and_end_of_course_session_matches_course_duration();
+
+/* Trigger (27) Check if register date in registers is earlier than course offering session date (Siddarth)*/
+CREATE OR REPLACE FUNCTION check_register_date_before_session_date()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_session_date DATE;
+BEGIN
+    SELECT session_date INTO course_session_date
+    FROM Course_Offering_Sessions
+    WHERE sid = NEW.sid 
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    /* Assume cannot register on the day of session itself */
+    IF NEW.register_date >= course_session_date THEN
+        RAISE EXCEPTION 'Cannot register for a course offering session which is over already.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_register_date_before_session_date
+BEFORE INSERT OR UPDATE ON Registers
+FOR EACH ROW EXECUTE FUNCTION check_register_date_before_session_date();

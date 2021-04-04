@@ -250,83 +250,85 @@ insert into Rooms(seating_capacity, location) values(5, 'Kevin and Agnes Babyroo
 insert into Rooms(seating_capacity, location) values(15, 'Kevin and Agnes Third House');
 insert into Rooms(seating_capacity, location) values(25, 'Kevin and Agnes Mansion');
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 1, '2021-02-02', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 1, '2021-02-16', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 1, '2021-03-02', 16, 18);
+BEGIN TRANSACTION;
+SET CONSTRAINTS check_all_course_offering_session_is_being_conducted_trigger DEFERRED;
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 1, '2021-02-02', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 1, '2021-02-10', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 1, '2021-02-25', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 2, '2021-03-04', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 2, '2021-03-04', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-02-01', 2, '2021-03-15', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-02-01', 2, '2021-04-01', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-01', 3, '2021-04-01', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-03-01', 3, '2021-04-15', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-03-01', 3, '2021-05-03', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-01', 3, '2021-04-01', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-03-01', 3, '2021-04-15', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-03-01', 3, '2021-05-03', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 4, '2021-02-01', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 4, '2021-02-01', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 4, '2021-02-15', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 4, '2021-03-01', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 5, '2021-03-01', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-02-01', 5, '2021-03-15', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-02-01', 5, '2021-04-01', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 5, '2021-03-01', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-02-01', 5, '2021-03-15', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-02-01', 5, '2021-04-01', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-01', 6, '2021-04-01', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-01', 6, '2021-04-01', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-03-01', 6, '2021-04-15', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-03-01', 6, '2021-05-03', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 7, '2021-02-05', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 7, '2021-02-15', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 7, '2021-03-01', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 7, '2021-02-05', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 7, '2021-02-15', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 7, '2021-03-01', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 8, '2021-03-01', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 8, '2021-03-01', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-02-01', 8, '2021-03-15', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-02-01', 8, '2021-04-01', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-01', 9, '2021-04-01', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-03-01', 9, '2021-04-15', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-03-01', 9, '2021-05-03', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-01', 9, '2021-04-01', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-03-01', 9, '2021-04-15', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-03-01', 9, '2021-05-03', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 10, '2021-02-03', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 10, '2021-02-03', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 10, '2021-02-17', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 10, '2021-03-03', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 1, '2021-07-02', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-06-01', 1, '2021-07-16', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 1, '2021-08-03', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 1, '2021-07-02', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-06-01', 1, '2021-07-16', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 1, '2021-08-03', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-07-01', 2, '2021-08-02', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-07-01', 2, '2021-08-02', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-07-01', 2, '2021-08-16', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-07-01', 2, '2021-09-01', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-08-01', 3, '2021-09-01', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-08-01', 3, '2021-09-15', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-08-01', 3, '2021-10-01', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-08-01', 3, '2021-09-01', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-08-01', 3, '2021-09-15', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-08-01', 3, '2021-10-01', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 4, '2021-07-02', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 4, '2021-07-02', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-06-01', 4, '2021-07-16', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 4, '2021-08-03', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-07-01', 5, '2021-08-02', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-07-01', 5, '2021-08-16', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-07-01', 5, '2021-09-01', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-07-01', 5, '2021-08-02', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-07-01', 5, '2021-08-16', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-07-01', 5, '2021-09-01', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-08-01', 6, '2021-09-01', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-08-01', 6, '2021-09-01', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-08-01', 6, '2021-09-15', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-08-01', 6, '2021-10-01', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 7, '2021-07-01', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-06-01', 7, '2021-07-15', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 7, '2021-08-02', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 7, '2021-07-01', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-06-01', 7, '2021-07-15', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 7, '2021-08-02', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-07-01', 8, '2021-08-02', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-07-01', 8, '2021-08-02', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-07-01', 8, '2021-08-16', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-07-01', 8, '2021-09-01', 16, 18);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-08-01', 9, '2021-09-01', 9, 12);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-08-01', 9, '2021-09-15', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-08-01', 9, '2021-10-01', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-08-01', 9, '2021-09-01', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-08-01', 9, '2021-09-15', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-08-01', 9, '2021-10-01', 16, 17);
 
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 10, '2021-07-01', 9, 12);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 10, '2021-07-01', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-06-01', 10, '2021-07-15', 14, 16);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 10, '2021-08-02', 16, 18);
 
@@ -409,6 +411,7 @@ insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, cou
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 1, 'Calculus', '2021-06-01', 10);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 2, 'Calculus', '2021-06-01', 10);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 3, 'Calculus', '2021-06-01', 10);
+COMMIT;
 
 insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(1, '2021-01-03', 1, '2021-01-01', 1, 0, 300);
 insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(2, '2021-01-03', 1, '2021-01-01', 1, 0, 0);
@@ -423,7 +426,6 @@ insert into Registers(cust_id, register_date, sid, launch_date, course_id) value
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 1, '2021-01-01', 1);
--- insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(10, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-06-02', 1, '2021-06-01', 7);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-02-10', 2, '2021-02-01', 2);
 
