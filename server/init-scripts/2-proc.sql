@@ -20,21 +20,23 @@ DECLARE
   num_of_courses_session_after_depart_date integer;
   num_of_course_area_emp_managing integer;
 BEGIN
-  SELECT count(distinct course_id) INTO num_of_registration_after_depart_date
-  FROM Course_Offerings
-  WHERE admin_eid = NEW.eid and registration_deadline > NEW.depart_date;
+  SELECT count(distinct (course_id, launch_date)) INTO num_of_registration_after_depart_date
+  FROM Employees NATURAL JOIN Administrators NATURAL JOIN Course_Offerings
+  WHERE eid = NEW.eid and registration_deadline > NEW.depart_date;
   
   SELECT count(distinct c1.course_id) INTO num_of_courses_session_after_depart_date
-  FROM Conducts c1, Course_Offering_Sessions c2
-  WHERE c1.instructor_id = NEW.eid and c1.course_id = c2.course_id
-  and c2.launch_date > NEW.depart_date;
+  FROM Conducts c1 NATURAL JOIN Course_Offering_Sessions c2
+  WHERE c1.instructor_id = NEW.eid
+  and c1.course_id = c2.course_id
+  and c2.session_date > NEW.depart_date;
   
-  SELECT count(distinct c.course_area_name) INTO num_of_course_area_emp_managing
-  FROM Managers m, Course_Areas c
-  WHERE m.eid = NEW.eid and m.eid = c.eid;
+  SELECT count(course_id) INTO num_of_course_area_emp_managing
+  FROM Managers m NATURAL LEFT OUTER JOIN Course_Areas c NATURAL LEFT OUTER JOIN (Courses NATURAL JOIN Course_Offerings)
+  WHERE m.eid = NEW.eid
+  and ((end_date IS NOT NULL and end_date > NEW.depart_date) or end_date IS NULL);
   
   IF num_of_registration_after_depart_date > 0 THEN
-  	RAISE EXCEPTION 'Employee is an administraot who is handling some course offering where its registration deadline is after employee departure date. Hence employee cannot be removed.';
+  	RAISE EXCEPTION 'Employee is an administrator who is handling some course offering where its registration deadline is after employee departure date. Hence employee cannot be removed.';
   END IF;
   
   IF num_of_courses_session_after_depart_date > 0 THEN
@@ -194,7 +196,7 @@ BEGIN
   result := (With 
     Active_And_Partially_Actice_Course_Packages AS
     (
-      SELECT package_id, course_package_name AS package_name, purchase_date, price AS price_of_package, num_remaining_redemptions AS number_of_free_sessions_not_redeeemed
+      SELECT distinct package_id, course_package_name AS package_name, purchase_date, price AS price_of_package, num_remaining_redemptions AS number_of_free_sessions_not_redeeemed
       FROM Course_Packages NATURAL JOIN Buys NATURAL LEFT OUTER JOIN Redeems NATURAL LEFT OUTER JOIN Course_Offering_Sessions
       WHERE cust_id = customer_id
       and 
@@ -214,14 +216,17 @@ BEGIN
       GROUP BY package_id
     )
       SELECT 
-      json_build_object (
+      json_agg(
+        json_build_object(
         'package_name', package_name,
         'purchase_date', purchase_date,
         'price_of_package', price_of_package,
         'number_of_free_sessions_not_redeemed_yet', number_of_free_sessions_not_redeeemed,
         'redeemed_session_info', coalesce(redeemed_session_info, null)
+        )
       )
     FROM Active_And_Partially_Actice_Course_Packages NATURAL LEFT OUTER JOIN Redeemed_Sessions);
+
     return result;
 END;
 $$ LANGUAGE plpgsql;
@@ -267,9 +272,16 @@ BEGIN
   return query
   /*{course_id, sid, launch_date, session_date, fees, start_time}*/
   SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
-  FROM (Registers R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) inner join Employees on instructor_id = eid
+  FROM (Registers R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
   WHERE cust_id = customer_id
-  and registration_deadline > current_date
+  and registration_deadline > CURRENT_DATE
+
+  UNION 
+
+  SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
+  FROM (Redeems R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
+  WHERE cust_id = customer_id
+  and registration_deadline > CURRENT_DATE
   ORDER BY session_date asc, session_start_hour asc;
 
 END;
@@ -328,17 +340,8 @@ $$ LANGUAGE plpgsql;
 /* Function (22) update_room (Siddarth) */
 CREATE OR REPLACE PROCEDURE update_room(existing_course_id INTEGER, existing_launch_date DATE, existing_session_id INTEGER, new_room_id INTEGER)
 AS $$
-BEGIN
-	UPDATE Conducts
-  SET rid = new_room_id
-  WHERE course_id = existing_course_id and existing_launch_date = launch_date and sid = existing_session_id;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION check_if_update_room_is_valid() RETURNS TRIGGER
-AS $$
 DECLARE
-	num_of_registrations INTEGER;
+  existing_session_seating_capacity INTEGER;
   new_room_seating_capacity INTEGER;
   current_date DATE;
   course_duration INTEGER;
@@ -346,55 +349,52 @@ DECLARE
   course_offering_session_start_hour INTEGER;
   num_of_conflicting_sessions INTEGER;
 BEGIN
-  /* Find current total number of registrations of a course_offering_session */
-	SELECT count(distinct R.cust_id) INTO num_of_registrations
-  FROM Registers R
-  WHERE R.course_id = NEW.course_id
-  and R.sid = NEW.sid
-  and R.launch_date = NEW.launch_date;
-	
+  SELECT seating_capacity INTO existing_session_seating_capacity
+  FROM Conducts C1 NATURAL JOIN Course_Offering_Sessions C2 NATURAL JOIN Rooms R1
+  WHERE C2.course_id = existing_course_id
+  and C2.launch_date = existing_launch_date
+  and C2.sid = existing_session_id;
+
   /* Find seating capacity of new room */
   SELECT seating_capacity INTO new_room_seating_capacity
   FROM Rooms
-  WHERE rid = NEW.rid;
-  
-  IF num_of_registrations > new_room_seating_capacity THEN
+  WHERE rid = existing_session_id;
+
+  IF new_room_seating_capacity < existing_session_seating_capacity THEN
   	RAISE EXCEPTION 'New room cannot accomodate to the number of people in course offering session.';
   END IF;
-  
+
   /* Find course duration */
   SELECT duration INTO course_duration
   FROM Conducts NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
-  WHERE course_id = NEW.course_id
-  and sid = NEW.sid
-  and launch_date = NEW.launch_date;
-  
+  WHERE course_id = existing_course_id
+  and sid = existing_session_id
+  and launch_date = existing_launch_date;
+
   /* Find start hour of course_offering_session */
   SELECT start_time_hour, session_date  INTO course_offering_session_start_hour, course_offering_session_date
   FROM Conducts NATURAL JOIN Course_Offering_Sessions
-  WHERE course_id = NEW.course_id
-  and sid = NEW.sid
-  and launch_date = NEW.launch_date;
+  WHERE course_id = existing_course_id
+  and sid = existing_session_id
+  and launch_date = existing_launch_date;
 
   /* Find number of conflicting course_offering_sessions in the new rid */
   SELECT count(distinct sid) INTO num_of_conflicting_sessions
   FROM Conducts NATURAL JOIN Course_Offering_Sessions
-  WHERE rid = NEW.rid
+  WHERE rid = existing_session_id
   and session_date = course_offering_session_date
   and (int8range(course_offering_session_start_hour, course_offering_session_start_hour + course_duration)
   && int8range(start_time_hour, end_time_hour));
-  
+
   IF num_of_conflicting_sessions > 0 THEN
     RAISE EXCEPTION 'There is a session using the room on the same date and duration of the course. Hence new room cannot be assigned.';
   END IF;
 
-  RETURN NEW;
+	UPDATE Conducts
+  SET rid = new_room_id
+  WHERE course_id = existing_course_id and existing_launch_date = launch_date and sid = existing_session_id;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER check_if_update_room_is_valid_trigger
-BEFORE UPDATE ON Conducts
-FOR EACH ROW EXECUTE FUNCTION check_if_update_room_is_valid();
 
 /* Function (23) remove_session (Gerren) */
 CREATE OR REPLACE PROCEDURE remove_session(course_identifier INTEGER, course_launch_date DATE, session_num INTEGER)
@@ -446,7 +446,6 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION promote_courses()
 RETURNS TABLE(customer_id integer, customer_name text, course_area_name text, course_id integer, course_title text, launch_date date, registration_deadline date, fees numeric) AS $$
 BEGIN
-
   return query
   WITH 
     Inactive_Customers as 

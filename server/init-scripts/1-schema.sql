@@ -356,7 +356,7 @@ BEGIN
   FROM Course_Offering_Sessions 
   WHERE sid = NEW.sid AND course_id = NEW.course_id AND launch_date = NEW.launch_date;
   
-	SELECT COUNT(sid) > 0 INTO room_already_taken
+  SELECT COUNT(sid) > 0 INTO room_already_taken
   FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
   WHERE rid = NEW.rid AND session_date = new_session_date
   AND (int8range(new_session_start, new_session_start + new_session_end - new_session_start) && int8range(start_time_hour, end_time_hour));
@@ -510,7 +510,7 @@ FOR EACH ROW EXECUTE FUNCTION instructor_employee_verification_func();
 
 /* Trigger (10) */
 
-/* Trigger (11) */
+/* Trigger (11) (Siddarth) */
 CREATE OR REPLACE FUNCTION check_instructor_is_not_full_time_instructor()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -554,9 +554,71 @@ CREATE TRIGGER check_instructor_is_not_part_time_instructor_trigger
 BEFORE INSERT OR UPDATE ON Full_Time_Instructors
 FOR EACH ROW EXECUTE FUNCTION check_instructor_is_not_part_time_instructor();
 
-/* Trigger (12) */
+/* Trigger (12) (Siddarth) */
+CREATE OR REPLACE FUNCTION check_instructor_teaches_a_course_session_they_specialise_in()
+RETURNS TRIGGER AS $$
+DECLARE
+	is_instructor_specialised_in_course_area BOOLEAN;
+BEGIN
+	SELECT COUNT(*) > 0 INTO is_instructor_specialised_in_course_area
+    FROM Instructors 
+    WHERE instructor_id = NEW.instructor_id and NEW.course_area_name = course_area_name;
 
-/* Trigger (13) */
+    IF is_instructor_specialised_in_course_area THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'Instructor is not specialised in course area to teach the course session.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER instructor_specialize_in_course_area_of_course_session_trigger
+BEFORE INSERT OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION check_instructor_teaches_a_course_session_they_specialise_in();
+
+/* Trigger (13) (Siddarth) */
+CREATE OR REPLACE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour()
+RETURNS TRIGGER AS $$
+DECLARE
+	new_assigned_session_date DATE;
+    new_assigned_session_start_hour INTEGER;
+    new_assigned_session_duration INTEGER;
+	count_of_conflicting_course_sessions INTEGER;
+BEGIN
+	/*Find new assigned course_session session date and session start_hour*/
+	SELECT session_date, start_time_hour INTO new_assigned_session_date, new_assigned_session_start_hour
+    FROM Course_Offering_Sessions
+    WHERE NEW.sid = sid
+    and NEW.launch_date = launch_date
+    and NEW.course_id = course_id;
+    
+    SELECT duration INTO new_assigned_session_duration
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+    WHERE NEW.course_id = course_id;
+
+	/*
+    Find the number of course_offering_sessions with the same session_date and start_time_hour
+    as the assigned course_session date and course_session 
+    */
+    SELECT count(*) INTO count_of_conflicting_course_sessions
+    FROM Conducts NATURAL JOIN Course_Offering_Sessions
+    WHERE NEW.instructor_id = instructor_id
+    and 
+    session_date = new_assigned_session_date
+    and
+    (int8range(new_assigned_session_start_hour, new_assigned_session_start_hour + new_assigned_session_duration) && int8range(start_time_hour, end_time_hour));
+    
+    IF count_of_conflicting_course_sessions > 1 THEN
+        RAISE EXCEPTION 'Instructor is conducting another session on the same date and same time period. Hence not able to assign instructor.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER instructor_cannot_teach_more_than_one_course_session_at_any_hour_trigger
+BEFORE INSERT OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour();
 
 /* Trigger (14) */
 
