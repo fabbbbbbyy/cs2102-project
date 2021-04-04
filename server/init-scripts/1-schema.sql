@@ -347,7 +347,7 @@ FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 CREATE OR REPLACE FUNCTION room_overlapping_conduct_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	room_already_taken BOOLEAN;
+  room_already_taken BOOLEAN;
   new_session_start INTEGER;
   new_session_end INTEGER;
   new_session_date DATE;
@@ -356,7 +356,7 @@ BEGIN
   FROM Course_Offering_Sessions 
   WHERE sid = NEW.sid AND course_id = NEW.course_id AND launch_date = NEW.launch_date;
   
-	SELECT COUNT(sid) > 0 INTO room_already_taken
+  SELECT COUNT(sid) > 0 INTO room_already_taken
   FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
   WHERE rid = NEW.rid AND session_date = new_session_date
   AND (int8range(new_session_start, new_session_start + new_session_end - new_session_start) && int8range(start_time_hour, end_time_hour));
@@ -375,16 +375,250 @@ BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION room_overlapping_conduct_verification_func();
 
 /* Trigger (8) */
+CREATE OR REPLACE FUNCTION part_time_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_same_eid_records
+  FROM Full_Time_Employees FTE
+  WHERE FTE.eid = NEW.eid;
+  
+	IF num_same_eid_records > 0 THEN
+  	RAISE EXCEPTION 'This employee is already a full time employee, and therefore cannot be a part time employee.';
+  ELSE 
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER part_time_employee_verification
+BEFORE INSERT OR UPDATE ON Part_Time_Employees
+FOR EACH ROW EXECUTE FUNCTION part_time_employee_verification_func();
+
+CREATE OR REPLACE FUNCTION full_time_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_same_eid_records
+  FROM Part_Time_Employees PTE
+  WHERE PTE.eid = NEW.eid;
+  
+	IF num_same_eid_records > 0 THEN
+  	RAISE EXCEPTION 'This employee is already a part time employee, and therefore cannot be a full time employee.';
+  ELSE 
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER full_time_employee_verification
+BEFORE INSERT OR UPDATE ON Full_Time_Employees
+FOR EACH ROW EXECUTE FUNCTION full_time_employee_verification_func();
 
 /* Trigger (9) */
+CREATE OR REPLACE FUNCTION manager_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_eid_records integer;
+    num_instructor_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_same_eid_records
+    FROM Administrators A
+    WHERE A.eid = NEW.eid;
+
+    SELECT COUNT(*) INTO num_instructor_same_eid_records
+    FROM Instructors
+    WHERE instructor_id = NEW.eid;
+  
+	IF num_same_eid_records > 0 THEN
+  	    RAISE EXCEPTION 'This employee is already an administrator, and therefore cannot be a manager.';
+    END IF;
+    
+    IF num_instructor_same_eid_records > 0 THEN
+        RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be a manager.';
+    END IF; 
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER manager_employee_verification
+BEFORE INSERT OR UPDATE ON Managers
+FOR EACH ROW EXECUTE FUNCTION manager_employee_verification_func();
+
+CREATE OR REPLACE FUNCTION administrator_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_eid_records integer;
+    num_instructor_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_same_eid_records
+    FROM Managers M
+    WHERE M.eid = NEW.eid;
+
+    SELECT COUNT(*) INTO num_instructor_same_eid_records
+    FROM Instructors
+    WHERE instructor_id = NEW.eid;
+  
+	IF num_same_eid_records > 0 THEN
+  	    RAISE EXCEPTION 'This employee is already a manager, and therefore cannot be an administrator.';
+    END IF;
+
+    IF num_instructor_same_eid_records > 0 THEN
+        RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be a administrator.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER administrator_employee_verification
+BEFORE INSERT OR UPDATE ON Administrators
+FOR EACH ROW EXECUTE FUNCTION administrator_employee_verification_func();
+
+CREATE OR REPLACE FUNCTION instructor_employee_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_manager_same_eid_records integer;
+    num_administrator_same_eid_records integer;
+BEGIN
+	SELECT COUNT(*) INTO num_manager_same_eid_records
+    FROM Managers
+    WHERE eid = NEW.instructor_id;
+
+    SELECT COUNT(*) INTO num_administrator_same_eid_records
+    FROM Administrators
+    WHERE eid = NEW.instructor_id;
+  
+	IF num_manager_same_eid_records > 0 THEN
+  	    RAISE EXCEPTION 'This employee is already a manager, and therefore cannot be an instructor.';
+    END IF;
+
+    IF num_administrator_same_eid_records > 0 THEN
+        RAISE EXCEPTION 'This employee is already an administrator, and therefore cannot be an instructor.';
+    END IF;
+  	
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER instructor_employee_verification
+BEFORE INSERT OR UPDATE ON Instructors
+FOR EACH ROW EXECUTE FUNCTION instructor_employee_verification_func();
 
 /* Trigger (10) */
 
-/* Trigger (11) */
+/* Trigger (11) (Siddarth) */
+CREATE OR REPLACE FUNCTION check_instructor_is_not_full_time_instructor()
+RETURNS TRIGGER AS $$
+DECLARE
+	count_of_full_time_instr integer;
+BEGIN
+    SELECT count(*) INTO count_of_full_time_instr
+    FROM Full_Time_Instructors
+    WHERE NEW.instructor_id  = instructor_id ;
+  
+    IF count_of_full_time_instr > 0 THEN
+        RAISE EXCEPTION 'This instructor is already a full time instructor, and therefore cannot be a part time instructor.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
 
-/* Trigger (12) */
+CREATE TRIGGER check_instructor_is_not_full_time_instructor_trigger
+BEFORE INSERT OR UPDATE ON Part_Time_Instructors
+FOR EACH ROW EXECUTE FUNCTION check_instructor_is_not_full_time_instructor();
 
-/* Trigger (13) */
+
+CREATE OR REPLACE FUNCTION check_instructor_is_not_part_time_instructor()
+RETURNS TRIGGER AS $$
+DECLARE
+	count_of_full_time_instr integer;
+BEGIN
+	SELECT count(*) INTO count_of_full_time_instr
+    FROM Part_Time_Instructors
+    WHERE NEW.instructor_id = instructor_id ;
+  
+    IF count_of_full_time_instr > 0 THEN
+        RAISE EXCEPTION 'This instructor is already a part time instructor, and therefore cannot be a full time instructor.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_instructor_is_not_part_time_instructor_trigger
+BEFORE INSERT OR UPDATE ON Full_Time_Instructors
+FOR EACH ROW EXECUTE FUNCTION check_instructor_is_not_part_time_instructor();
+
+/* Trigger (12) (Siddarth) */
+CREATE OR REPLACE FUNCTION check_instructor_teaches_a_course_session_they_specialise_in()
+RETURNS TRIGGER AS $$
+DECLARE
+	is_instructor_specialised_in_course_area BOOLEAN;
+BEGIN
+	SELECT COUNT(*) > 0 INTO is_instructor_specialised_in_course_area
+    FROM Instructors 
+    WHERE instructor_id = NEW.instructor_id and NEW.course_area_name = course_area_name;
+
+    IF is_instructor_specialised_in_course_area THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'Instructor is not specialised in course area to teach the course session.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER instructor_specialize_in_course_area_of_course_session_trigger
+BEFORE INSERT OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION check_instructor_teaches_a_course_session_they_specialise_in();
+
+/* Trigger (13) (Siddarth) */
+CREATE OR REPLACE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour()
+RETURNS TRIGGER AS $$
+DECLARE
+	new_assigned_session_date DATE;
+    new_assigned_session_start_hour INTEGER;
+    new_assigned_session_duration INTEGER;
+	count_of_conflicting_course_sessions INTEGER;
+BEGIN
+	/*Find new assigned course_session session date and session start_hour*/
+	SELECT session_date, start_time_hour INTO new_assigned_session_date, new_assigned_session_start_hour
+    FROM Course_Offering_Sessions
+    WHERE NEW.sid = sid
+    and NEW.launch_date = launch_date
+    and NEW.course_id = course_id;
+    
+    SELECT duration INTO new_assigned_session_duration
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+    WHERE NEW.course_id = course_id;
+
+	/*
+    Find the number of course_offering_sessions with the same session_date and start_time_hour
+    as the assigned course_session date and course_session 
+    */
+    SELECT count(*) INTO count_of_conflicting_course_sessions
+    FROM Conducts NATURAL JOIN Course_Offering_Sessions
+    WHERE NEW.instructor_id = instructor_id
+    and 
+    session_date = new_assigned_session_date
+    and
+    (int8range(new_assigned_session_start_hour, new_assigned_session_start_hour + new_assigned_session_duration) && int8range(start_time_hour, end_time_hour));
+    
+    IF count_of_conflicting_course_sessions > 1 THEN
+        RAISE EXCEPTION 'Instructor is conducting another session on the same date and same time period. Hence not able to assign instructor.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER instructor_cannot_teach_more_than_one_course_session_at_any_hour_trigger
+BEFORE INSERT OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour();
 
 /* Trigger (14) */
 
