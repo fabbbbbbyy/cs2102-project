@@ -179,6 +179,7 @@ create table Course_Offerings (
     target_number_registrations integer not null check(target_number_registrations > 0),
     primary key(course_id, launch_date),
   
+    check(start_date >= launch_date),
     check(end_date >= start_date),
   	check(registration_deadline + 10 <= start_date)
 );
@@ -335,13 +336,13 @@ CREATE TRIGGER set_course_offering_start_end_date
 AFTER INSERT OR DELETE OR UPDATE ON Course_Offering_sessions
 FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 
-/* Trigger (3) */
+/* Trigger (3) For each course, a customer can register for at most one of its sessions before the registration deadline (Kevin) */
 
-/* Trigger (4) */
+/* Trigger (4) The seating capacity of a course offering is equal to the sum of the seating capacities of all its sessions (Kevin) */
 
-/* Trigger (5) */
+/* Trigger (5) Each customer can have at most one active or partially active package (Fabian) */
 
-/* Trigger (6) */
+/* Trigger (6) Upon updating of cancel table, update the redeem and customer package (Kevin) */
 
 /* Trigger (7) Each room can be used to conduct at most one session at any time (Gerren) */
 CREATE OR REPLACE FUNCTION room_overlapping_conduct_verification_func() 
@@ -374,7 +375,7 @@ CREATE TRIGGER room_overlapping_conduct_verification
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION room_overlapping_conduct_verification_func();
 
-/* Trigger (8) */
+/* Trigger (8) Employee can be either a full_time or part_time employee but not both (Fabian) */
 CREATE OR REPLACE FUNCTION part_time_employee_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -417,7 +418,7 @@ CREATE TRIGGER full_time_employee_verification
 BEFORE INSERT OR UPDATE ON Full_Time_Employees
 FOR EACH ROW EXECUTE FUNCTION full_time_employee_verification_func();
 
-/* Trigger (9) */
+/* Trigger (9) A full time employee MUST either be a manager or an admin but not both (Fabian) */
 CREATE OR REPLACE FUNCTION manager_employee_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -554,7 +555,7 @@ CREATE TRIGGER check_instructor_is_not_part_time_instructor_trigger
 BEFORE INSERT OR UPDATE ON Full_Time_Instructors
 FOR EACH ROW EXECUTE FUNCTION check_instructor_is_not_part_time_instructor();
 
-/* Trigger (12) (Siddarth) */
+/* Trigger (12) Instructor assigned to teach a course session must be specialised in that course area (Siddarth) */
 CREATE OR REPLACE FUNCTION check_instructor_teaches_a_course_session_they_specialise_in()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -576,7 +577,7 @@ CREATE TRIGGER instructor_specialize_in_course_area_of_course_session_trigger
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION check_instructor_teaches_a_course_session_they_specialise_in();
 
-/* Trigger (13) (Siddarth) */
+/* Trigger (13) Each instructor can teach at most one course session at any hour (Siddarth) */
 CREATE OR REPLACE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -620,7 +621,7 @@ CREATE TRIGGER instructor_cannot_teach_more_than_one_course_session_at_any_hour_
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour();
 
-/* Trigger (14) */
+/* Trigger (14) Each instructor must not be assigned to teach two consecutive course sessions, there must be at least a one hour beak between sessions (Fabian) */
 
 /* Trigger (15) Each part-time instructor must not teach more than 30 hours each month (Gerren) */
 CREATE OR REPLACE FUNCTION part_time_instructor_conduct_verification_func() 
@@ -650,15 +651,49 @@ CREATE TRIGGER part_time_instructor_conduct_verification
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
 
-/* Trigger (16) */
+/* Trigger (16) Enforce that every instance of Sessions participate in the Conducts relationship set 
+=> Insert and update for sessions tuples must enforce the trigger (Kevin) */
 
-/* Trigger (17) */
+/* Trigger (17) Check ensure that start_time, duration and end_time follow time constraints (Siddarth) */
 
-/* Trigger (18) */
+/* Trigger (18) If sid in cancels is in redeems --> redeem_amt is null and package_credit > 0
+If sid is cancels in in buys --> redeem_amt is > 0 and package_credit is null (Kevin) */
 
-/* Trigger (19) */
+/* Trigger (19) If row is inserted into Cancels, ensure that Buys or Redeems is updated (Kevin) */
 
-/* Trigger (20) */
+/* Trigger (20) Every course_offering_session needs to exist in conducts relation (Siddarth)*/
+CREATE OR REPLACE FUNCTION check_all_course_offering_session_is_being_conducted()
+RETURNS TRIGGER AS $$
+DECLARE
+    num_of_course_offering_sessions INTEGER;
+    is_every_course_offering_session_conducted BOOLEAN;
+    num_of_conducts INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO num_of_course_offering_sessions
+    FROM Course_Offering_Sessions;
+
+    SELECT COUNT(*) = num_of_course_offering_sessions INTO is_every_course_offering_session_conducted
+    FROM Course_Offering_Sessions C1
+    WHERE EXISTS (
+        SELECT 1
+        FROM Conducts C2
+        WHERE C1.sid = C2.sid
+        and C1.launch_date = C2.launch_date
+        and C1.course_id = C2.course_id
+    );
+
+    IF is_every_course_offering_session_conducted THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'New/updated course offering session is not being conducted. Every course offering sessions needs to be conducted by an instructor.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER check_all_course_offering_session_is_being_conducted_trigger
+AFTER INSERT OR UPDATE ON Course_Offering_Sessions
+DEFERRABLE INITIAlLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_all_course_offering_session_is_being_conducted();
 
 /* Trigger (21) Trigger that ensures every credit card references at least one customer (Gerren) */
 CREATE OR REPLACE FUNCTION credit_card_verification_func() 
@@ -682,4 +717,125 @@ CREATE TRIGGER credit_card_verification
 BEFORE INSERT OR UPDATE ON Credit_Cards
 FOR EACH ROW EXECUTE FUNCTION credit_card_verification_func();
 
-/* Trigger (22) */
+/* Trigger (22) Every customer can register for at most 1 session from the same course_offering (Fabian) */
+
+/* Trigger (23) Ensure register date cannot be later than registration deadline and before launch date of course offering (Siddarth) */
+CREATE OR REPLACE FUNCTION ensure_register_date_earlier_than_registration_deadline()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_offering_registration_deadline DATE;
+    course_offering_launch_date DATE;
+BEGIN
+
+    SELECT registration_deadline, launch_date INTO course_offering_registration_deadline, course_offering_launch_date
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings
+    WHERE sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    IF NEW.register_date > course_offering_registration_deadline THEN
+        RAISE EXCEPTION 'Cannot register for a course offering session as the register date is later than the registration deadline.';
+    ELSIF NEW.register_date < course_offering_launch_date THEN
+        RAISE EXCEPTION 'Cannot register for a course offering session as the register date is earlier than course offering launch date.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verify_register_date_before_registration_deadline
+BEFORE INSERT OR UPDATE ON Registers
+FOR EACH ROW EXECUTE FUNCTION ensure_register_date_earlier_than_registration_deadline();
+
+/* Trigger (24) Check if a Customer is trying to Register for a session he has already Redeemed. */
+
+/* Trigger (25) Check if a Customer is trying to Redeem for a session he has already Registered. */
+
+/* Trigger (26) Check if end_time_hour - start_time_hour = duration from Courses (Siddarth)*/
+CREATE OR REPLACE FUNCTION ensure_start_and_end_of_course_session_matches_course_duration()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_duration INTEGER;
+    is_course_offering_session_start_and_end_hour_valid BOOLEAN;
+BEGIN
+    SELECT duration INTO course_duration
+    FROM Courses
+    WHERE course_id = NEW.course_id;  
+
+    is_course_offering_session_start_and_end_hour_valid := (NEW.end_time_hour - NEW.start_time_hour) = course_duration;
+
+    IF is_course_offering_session_start_and_end_hour_valid THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'Start and end hour of course offering session does not match course duration.';
+    END IF; 
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_validity_of_start_and_end_hour_of_course_session
+BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
+FOR EACH ROW EXECUTE FUNCTION ensure_start_and_end_of_course_session_matches_course_duration();
+
+/* Trigger (27) Check if register date in registers is earlier than course offering session date (Siddarth)*/
+CREATE OR REPLACE FUNCTION check_register_date_before_session_date()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_session_date DATE;
+BEGIN
+    SELECT session_date INTO course_session_date
+    FROM Course_Offering_Sessions
+    WHERE sid = NEW.sid 
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    /* Assume cannot register on the day of session itself */
+    IF NEW.register_date >= course_session_date THEN
+        RAISE EXCEPTION 'Cannot register for a course offering session which is over already.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_register_date_before_session_date
+BEFORE INSERT OR UPDATE ON Registers
+FOR EACH ROW EXECUTE FUNCTION check_register_date_before_session_date();
+
+/* Trigger (28) Check if redemption date in redeems is earlier than course offering session date */
+CREATE OR REPLACE FUNCTION check_redemption_date_before_session_date()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_session_date DATE;
+BEGIN
+    SELECT session_date INTO course_session_date
+    FROM Course_Offering_Sessions
+    WHERE sid = NEW.sid 
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    /* Assume cannot redeem on the day of sesion itself */
+    IF NEW.redemption_date >= course_session_date THEN
+        RAISE EXCEPTION 'Cannot redeem for a course offering session which is over already.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_redemption_date_before_session_date
+BEFORE INSERT OR UPDATE ON Redeems
+FOR EACH ROW EXECUTE FUNCTION check_redemption_date_before_session_date();
+
+/* Trigger (29) Check if this Employee eventually becomes either Part_Time or Full_Time by the end of the 
+block because it must be either. Deferrable initially deferred.*/
+
+/* Trigger (30) If eid is Part_Time_Employee, num_work_days must be null and num_work_hours non null */
+
+/* Trigger (31) If eid if Full_Time_Employee, num_work_days non null and num_work_hours must be null */
+
+/* Trigger (32) Check if Course_Offerings has at least 1 Course_Offering_Sessions. Deferrable initially deferred. 
+Prevent from just inserting into Course_Offering. (After) */
+
+/* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems. (Siddarth) */
+
+/* Check if sale_start_date < purchase_date in Course_Packages and sale_end_date > purchase_date in Course_Packages. */
