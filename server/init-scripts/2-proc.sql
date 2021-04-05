@@ -864,20 +864,9 @@ BEGIN
   SELECT I.course_area_name INTO course_area_name
   FROM Instructors I
   WHERE I.instructor_id = instructor_id;
-
-  SELECT seating_capacity INTO session_seating_capacity
-  FROM Rooms R
-  WHERE R.rid = room_id;
-
-  SELECT seating_capacity INTO updated_course_offering_seating_capacity
-  FROM Course_Offerings CO
-  WHERE CO.course_id = courseId AND CO.launch_date = launchDate;
-
-  updated_course_offering_seating_capacity := updated_course_offering_seating_capacity + session_seating_capacity;
   
   INSERT INTO Course_Offering_Sessions(sid, session_date, start_time_hour, end_time_hour, launch_date, course_id) VALUES(session_number, session_date, session_start_hour, session_start_hour + duration, launchDate, courseId);
   INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) VALUES(room_id, instructorId, session_number, course_area_name, launchDate, courseId);
-  UPDATE Course_Offerings SET seating_capacity = updated_course_offering_seating_capacity WHERE course_id = courseId AND launch_date = launchDate;
 END;
 $$ LANGUAGE plpgsql;
 
