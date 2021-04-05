@@ -9,6 +9,8 @@ insert into Course_Packages(course_package_name, num_free_registrations, price, 
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 8', 8, 0.0, '2021-03-24', '2021-06-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 9', 9, 25.0, '2021-03-24', '2021-07-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 10', 10, 35.0, '2021-03-24', '2021-08-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 11', 11, 35.0, '2021-04-24', '2021-08-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 12', 12, 35.0, '2021-03-24', '2021-03-29');
 
 insert into Credit_Cards(credit_card_num, expiry_date, from_date, cvv) values('4111 1111 1111 1111', '2021-10-10', '2016-10-10', '123');
 insert into Credit_Cards(credit_card_num, expiry_date, from_date, cvv) values('5500 0000 0000 0004', '2022-09-09', '2017-10-10', '234');
@@ -75,6 +77,7 @@ insert into Employees(address, depart_date, email, join_date, employee_name, pho
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Yew Tee', null, 'popo@yahoo.com', '2020-04-04', 'Popo', '99229922');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jurong East', null, 'pipi@yahoo.com', '2020-07-22', 'Pipi', '99559955');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jurong West', null, 'wawa@yahoo.com', '2020-12-22', 'Wawa', '99559988');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jurong Long', null, 'wawa233@yahoo.com', '2020-12-22', 'Wawa', '99559988');
 
 insert into Part_Time_Employees(eid, hourly_rate) values(1, 9);
 insert into Part_Time_Employees(eid, hourly_rate) values(2, 8);
@@ -86,6 +89,7 @@ insert into Part_Time_Employees(eid, hourly_rate) values(7, 9);
 insert into Part_Time_Employees(eid, hourly_rate) values(8, 11);
 insert into Part_Time_Employees(eid, hourly_rate) values(9, 9);
 insert into Part_Time_Employees(eid, hourly_rate) values(10, 8);
+insert into Part_Time_Employees(eid, hourly_rate) values(41, 8);
 
 insert into Full_Time_Employees(eid, monthly_salary) values(11, 1800);
 insert into Full_Time_Employees(eid, monthly_salary) values(12, 2400);
@@ -172,6 +176,7 @@ insert into Instructors(instructor_id, course_area_name) values(8, 'Database Sys
 insert into Instructors(instructor_id, course_area_name) values(9, 'Calculus');
 insert into Instructors(instructor_id, course_area_name) values(9, 'Operating Systems');
 insert into Instructors(instructor_id, course_area_name) values(10, 'Statistics');
+insert into Instructors(instructor_id, course_area_name) values(41, 'Ethics');
 insert into Instructors(instructor_id, course_area_name) values(31, 'Database Systems');
 insert into Instructors(instructor_id, course_area_name) values(32, 'Computer Networks');
 insert into Instructors(instructor_id, course_area_name) values(33, 'Calculus');
@@ -205,6 +210,7 @@ insert into Part_Time_Instructors(instructor_id, course_area_name) values(8, 'Da
 insert into Part_Time_Instructors(instructor_id, course_area_name) values(9, 'Calculus');
 insert into Part_Time_Instructors(instructor_id, course_area_name) values(9, 'Operating Systems');
 insert into Part_Time_Instructors(instructor_id, course_area_name) values(10, 'Statistics');
+insert into Part_Time_Instructors(instructor_id, course_area_name) values(41, 'Ethics');
 
 insert into Full_Time_Instructors(instructor_id, course_area_name) values(31, 'Database Systems');
 insert into Full_Time_Instructors(instructor_id, course_area_name) values(32, 'Computer Networks');
@@ -420,15 +426,4 @@ insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, cou
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 58, 'Calculus', '2021-06-01', 10);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 59, 'Calculus', '2021-06-01', 10);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 60, 'Calculus', '2021-06-01', 10);
-
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(1, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(2, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(3, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(4, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(5, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-01-02', 2, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-01-02', 2, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-01-02', 2, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 3, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(10, '2021-01-02', 3, '2021-01-01', 1);
 
