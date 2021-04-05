@@ -456,11 +456,11 @@ RETURNS TABLE(course_title TEXT, course_area TEXT, start_date DATE, end_date DAT
     FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL LEFT JOIN Registers
 	)
 	SELECT C.title, C.course_area_name, CO.start_date, CO.end_date, CO.registration_deadline, CO.fees,
-  	(SELECT SUM(room_seating_capacity) 
+  	(SELECT CAST(SUM(room_seating_capacity) AS INTEGER)
      FROM Course_Offerings_Sessions_Conducts_Rooms
      WHERE Course_Offerings_Sessions_Conducts_Rooms.course_id = CO.course_id
      GROUP BY Course_Offerings_Sessions_Conducts_Rooms.course_id) - 
-    (SELECT COUNT(cust_id) 
+    (SELECT CAST(COUNT(cust_id) AS INTEGER)
      FROM Course_Offerings_Sessions_Registers
      WHERE Course_Offerings_Sessions_Registers.course_id = CO.course_id
      GROUP BY Course_Offerings_Sessions_Registers.course_id)
@@ -626,6 +626,49 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (20) cancel_registration */
+CREATE OR REPLACE PROCEDURE cancel_registration(customer_id INTEGER, courseId INTEGER, launchDate DATE, sessionNumber INTEGER)
+AS $$
+DECLARE
+  is_valid_course_offering_identifier BOOLEAN;
+  is_valid_registration_identifier BOOLEAN;
+  did_redeem BOOLEAN;
+  package_credit INTEGER;
+  refund_amt NUMERIC;
+BEGIN
+  SELECT COUNT(*) = 1 INTO is_valid_course_offering_identifier
+  FROM Course_Offerings
+  WHERE course_id = course_id AND launch_date = launch_date AND sid = session_number;
+  
+  IF is_valid_course_offering_identifier = FALSE THEN
+  	RAISE EXCEPTION 'Invalid course offering identifier.';
+  END IF;
+
+  SELECT COUNT(*) = 1 INTO is_valid_registration_identifier
+  FROM Registers
+  WHERE cust_id = customer_id AND course_id = course_id AND launch_date = launch_date AND sid = session_number;
+  
+  IF is_valid_registration_identifier = FALSE THEN
+  	RAISE EXCEPTION 'Invalid registration details.';
+  END IF;
+  
+  SELECT COUNT(*) > 0 INTO did_redeem
+  FROM Redeems
+  WHERE cust_id = customer_id AND course_id = courseId AND launch_date = launchDate AND session_number = sessionNumber;
+  
+  IF did_redeem = TRUE THEN
+  	package_credit := 1;
+  	refund_amt := NULL;
+  ELSE
+  	SELECT fees * 0.9 INTO refund_amt
+	FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+	WHERE course_id = courseId AND launch_date = launchDate AND session_number = sessionNumber;
+	
+	package_credit := NULL;
+  END IF;
+
+  INSERT INTO Cancels(cancel_date, cust_id, launch_date, package_credit, refund_amt, sid, course_id) VALUES(CURRENT_DATE, launch_date, package_credit, refund_amt, session_number, course_id);
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (21) update_instructor */
 CREATE OR REPLACE PROCEDURE update_instructor(_course_id integer, _launch_date date, session_id integer,

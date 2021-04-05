@@ -232,8 +232,8 @@ create table Cancels (
     sid integer,
     launch_date date,
   	course_id integer,
-    package_credit integer not null,
-    refund_amt numeric not null,
+    package_credit integer, /* might be null to check for cancellation type */
+    refund_amt numeric, /* might be null to check for cancellation type */
     primary key(cust_id, cancel_date, sid, launch_date, course_id),
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
   			on delete cascade
@@ -340,11 +340,10 @@ CREATE TRIGGER set_course_offering_start_end_date
 AFTER INSERT OR DELETE OR UPDATE ON Course_Offering_sessions
 FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 
-/* Trigger (3) For each course, a customer can register for at most one of its sessions before the registration deadline (Kevin) */
-
 /* Trigger (4) The seating capacity of a course offering is equal to the sum of the seating capacities of all its sessions (Kevin) */
 /* Insert case handled by add_session; not possible to insert into sessions directly because of constraint with conducts */
-
+/* Look into using Conducts instead */
+/* Add trigger to check that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated */
 CREATE OR REPLACE FUNCTION change_course_offering_seating_capacity_on_session_change_func()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -403,8 +402,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER customer_one_package_verification
 BEFORE INSERT ON Buys
 FOR EACH ROW EXECUTE FUNCTION customer_one_package_verification_func();
-
-/* Trigger (6) Upon updating of cancel table, update the redeem and customer package (Kevin) */
 
 /* Trigger (7) Each room can be used to conduct at most one session at any time (Gerren) */
 CREATE OR REPLACE FUNCTION room_overlapping_conduct_verification_func() 
@@ -556,8 +553,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER instructor_employee_verification
 BEFORE INSERT OR UPDATE ON Instructors
 FOR EACH ROW EXECUTE FUNCTION instructor_employee_verification_func();
-
-/* Trigger (10) */
 
 /* Trigger (11) (Siddarth) */
 CREATE OR REPLACE FUNCTION check_instructor_is_not_full_time_instructor()
@@ -738,15 +733,55 @@ CREATE TRIGGER part_time_instructor_conduct_verification
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
 
-/* Trigger (16) Enforce that every instance of Sessions participate in the Conducts relationship set 
-=> Insert and update for sessions tuples must enforce the trigger (Kevin) */
-
 /* Trigger (17) Check ensure that start_time, duration and end_time follow time constraints (Siddarth) */
 
 /* Trigger (18) If sid in cancels is in redeems --> redeem_amt is null and package_credit > 0
 If sid is cancels in in buys --> redeem_amt is > 0 and package_credit is null (Kevin) */
+/*
+CREATE OR REPLACE FUNCTION cancels_updates_related_tables_func()
+RETURNS TRIGGER AS $$
+DECLARE
+    package_credit INTEGER;
+    refund_amt NUMERIC;
+    session_date DATE;
+BEGIN
+    IF (NEW.package_credit IS NOT NULL AND NEW.refund_amt IS NOT NULL) OR (NEW.package_credit IS NULL AND NEW.refund_amt IS NULL) THEN
+        RAISE EXCEPTION 'Package credit and refund amount cannot both be null in the Cancels table';
+    END IF;
 
-/* Trigger (19) If row is inserted into Cancels, ensure that Buys or Redeems is updated (Kevin) */
+    IF NEW.package_credit IS NOT NULL THEN
+    END IF;
+
+    package_credit := COALESCE(NEW.package_credit, 0.0);
+    refund_amt := COALESCE(NEW.refund_amt, 0);
+
+    IF 
+
+    IF NEW.package_credit IS NULL THEN
+    ELSE
+    END IF;
+    SELECT package_id, purchase_date, session_date INTO pack_id, purch_date, session_date
+    FROM Buys NATURAL JOIN Redeems NATURAL JOIN Course_Offering_Sessions
+    WHERE cust_id = NEW.cust_id AND sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
+
+    SELECT num_remaining_redemptions INTO old_credits
+    FROM Buys
+    WHERE cust_id = NEW.cust_id AND package_id = pack_id AND purchase_date = purch_date;
+
+    IF NEW.package_credit > 0 AND sess_date - NEW.cancel_date >= 7 THEN
+        UPDATE Buys
+        SET num_remaining_redemptions = old_credits + 1
+        WHERE cust_id = NEW.cust_id AND package_id = pack_id AND purchase_date = purch_date;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER cancels_updates_related_tables
+BEFORE INSERT ON Cancels
+FOR EACH ROW EXECUTE FUNCTION cancels_updates_related_tables_func();
+*/
 
 /* Trigger (20) Every course_offering_session needs to exist in conducts relation (Siddarth)*/
 CREATE OR REPLACE FUNCTION check_all_course_offering_session_is_being_conducted()
@@ -857,9 +892,9 @@ CREATE TRIGGER verify_register_date_before_registration_deadline
 BEFORE INSERT OR UPDATE ON Registers
 FOR EACH ROW EXECUTE FUNCTION ensure_register_date_earlier_than_registration_deadline();
 
-/* Trigger (24) Check if a Customer is trying to Register for a session he has already Redeemed. */
+/* Trigger (24) Check if a Customer is trying to Register for a session he has already Redeemed. (Siddarth) */
 
-/* Trigger (25) Check if a Customer is trying to Redeem for a session he has already Registered. */
+/* Trigger (25) Check if a Customer is trying to Redeem for a session he has already Registered. (Siddarth) */
 
 /* Trigger (26) Check if end_time_hour - start_time_hour = duration from Courses (Siddarth)*/
 CREATE OR REPLACE FUNCTION ensure_start_and_end_of_course_session_matches_course_duration()
@@ -911,7 +946,7 @@ CREATE TRIGGER ensure_register_date_before_session_date
 BEFORE INSERT OR UPDATE ON Registers
 FOR EACH ROW EXECUTE FUNCTION check_register_date_before_session_date();
 
-/* Trigger (28) Check if redemption date in redeems is earlier than course offering session date */
+/* Trigger (28) Check if redemption date in redeems is earlier than course offering session date (Siddarth) */
 CREATE OR REPLACE FUNCTION check_redemption_date_before_session_date()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -937,18 +972,19 @@ BEFORE INSERT OR UPDATE ON Redeems
 FOR EACH ROW EXECUTE FUNCTION check_redemption_date_before_session_date();
 
 /* Trigger (29) Check if this Employee eventually becomes either Part_Time or Full_Time by the end of the 
-block because it must be either. Deferrable initially deferred.*/
+block because it must be either. Deferrable initially deferred. (Fabian) */
 
-/* Trigger (30) If eid is Part_Time_Employee, num_work_days must be null and num_work_hours non null */
+/* Trigger (30) If eid is Part_Time_Employee, num_work_days must be null and num_work_hours non null (Fabian) */
 
-/* Trigger (31) If eid if Full_Time_Employee, num_work_days non null and num_work_hours must be null */
+/* Trigger (31) If eid if Full_Time_Employee, num_work_days non null and num_work_hours must be null (Fabian) */
 
 /* Trigger (32) Check if Course_Offerings has at least 1 Course_Offering_Sessions. Deferrable initially deferred. 
-Prevent from just inserting into Course_Offering. (After) */
+Prevent from just inserting into Course_Offering. (After) (Kevin) */
 
-/* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems. (Siddarth) */
+/* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems.
+    (Trigger on insertion or update of Cancels table) (Gerren) */
 
-/* Trigger (34) Check if sale_start_date < purchase_date in Course_Packages and sale_end_date > purchase_date in Course_Packages. */
+/* Trigger (34) Check if sale_start_date < purchase_date in Course_Packages and sale_end_date > purchase_date in Course_Packages. (Fabian)*/
 CREATE OR REPLACE FUNCTION course_package_date_validation_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -977,7 +1013,7 @@ CREATE TRIGGER course_package_date_validation
 BEFORE INSERT OR UPDATE ON Buys
 FOR EACH ROW EXECUTE FUNCTION course_package_date_validation_func();
 
-/* Trigger (35) Changes to Redeems will be reflected in Buys. */
+/* Trigger (35) Changes to Redeems will be reflected in Buys. (Fabian) */
 CREATE OR REPLACE FUNCTION redeems_updates_buys_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -1088,7 +1124,7 @@ CREATE TRIGGER remove_session_verification
 BEFORE DELETE ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION remove_session_verification_func();
                                                    
-/* Trigger (38) Check that sessions are consecutively numbered */
+/* Trigger (38) Check that sessions are consecutively numbered (Kevin) */
 CREATE OR REPLACE FUNCTION consecutive_session_numbering_func()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -1099,7 +1135,7 @@ BEGIN
     WHERE S.course_id = NEW.course_id AND S.launch_date = NEW.launch_date
     ORDER BY sid DESC
     LIMIT 1;
-  
+
     IF NEW.sid <> max_sid + 1 THEN
   	    RAISE EXCEPTION 'Incorrect session number (next session number is %)', max_sid + 1;
     END IF;
