@@ -39,13 +39,10 @@ CALL update_credit_card(1, '', '2030-12-12', '123');
 /* (Top: Specified input, bottom: existing course offering session)
     X---X
       X---X
-
       X---X
     X---X
-
   X------X
     X--X
-
     X--X
   X------X
 */
@@ -59,7 +56,6 @@ SELECT find_rooms('2021-03-15', 14, 1);
 /* (Top: Specified input, bottom: existing course offering session)
     X---X
         X---X
-
         X---X
     X---X
 */
@@ -156,4 +152,3 @@ CALL add_session(1, '2021-06-01', 5, '2021-07-09', 9, 1, 1);
 
 /* Function (28) popular_courses (Kevin) */
     /* Course start date is within this year; has >= 2 offerings; for every pair of offerings, later offering has more people */
-
