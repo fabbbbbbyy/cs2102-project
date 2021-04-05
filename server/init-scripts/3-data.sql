@@ -23,6 +23,8 @@ insert into Course_Packages(course_package_name, num_free_registrations, price, 
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 11', 11, 35.0, '2021-04-24', '2021-08-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 12', 12, 35.0, '2021-03-24', '2021-03-29');
 
+BEGIN TRANSACTION;
+SET CONSTRAINTS ensure_employee_either_part_time_or_full_time_employee DEFERRED;
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Boulevard', null, 'emily@gmail.com', '2005-05-17', 'Emily', '67892345');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jungle Swamp', null, 'brian@live.com', '2013-08-09', 'Brian', '88112233');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Hill', null, 'mabel@gmail.com', '2014-12-25', 'Mabel', '65689231');
@@ -110,6 +112,7 @@ insert into Full_Time_Employees(eid, monthly_salary) values(37, 1800);
 insert into Full_Time_Employees(eid, monthly_salary) values(38, 2400);
 insert into Full_Time_Employees(eid, monthly_salary) values(39, 3000);
 insert into Full_Time_Employees(eid, monthly_salary) values(40, 1900);
+COMMIT;
 
 insert into Administrators(eid) values(11);
 insert into Administrators(eid) values(12);

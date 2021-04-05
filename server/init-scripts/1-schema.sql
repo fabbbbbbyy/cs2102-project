@@ -1041,7 +1041,33 @@ BEFORE INSERT OR UPDATE ON Redeems
 FOR EACH ROW EXECUTE FUNCTION check_redemption_date_before_session_date();
 
 /* Trigger (29) Check if this Employee eventually becomes either Part_Time or Full_Time by the end of the 
-block because it must be either. Deferrable initially deferred. (Fabian) */
+block because it must be either. Deferrable initially deferred. (Siddarth) */
+CREATE OR REPLACE FUNCTION check_employee_either_part_time_or_full_time_employee()
+RETURNS TRIGGER AS $$
+DECLARE
+    is_part_time_employee BOOLEAN;
+    is_full_time_employee BOOLEAN;
+BEGIN
+    SELECT count(distinct eid) > 0 INTO is_part_time_employee
+    FROM Part_Time_Employees
+    WHERE eid = NEW.eid;
+
+    SELECT COUNT(distinct eid) > 0 INTO is_full_time_employee
+    FROM Full_Time_Employees
+    WHERE eid = NEW.eid;
+
+    IF is_part_time_employee or is_full_time_employee THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'Employee must either be part time or full time employee';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_employee_either_part_time_or_full_time_employee
+AFTER INSERT OR UPDATE ON Employees
+DEFERRABLE INITIAlLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION check_employee_either_part_time_or_full_time_employee();
 
 /* Trigger (30) If eid is Part_Time_Employee, num_work_days must be null and num_work_hours non null (Fabian) */
 
