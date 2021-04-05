@@ -810,6 +810,73 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (24) add_session */
+CREATE OR REPLACE PROCEDURE add_session(courseId INTEGER, launchDate DATE, session_number INTEGER, session_date DATE, session_start_hour INTEGER, instructorId INTEGER, room_id INTEGER)
+AS $$
+DECLARE
+  is_valid_course_offering_identifier BOOLEAN;
+  is_valid_instructor BOOLEAN;
+  is_valid_room BOOLEAN;
+  registration_deadline DATE;
+  duration INTEGER;
+  course_area_name TEXT;
+  session_seating_capacity INTEGER;
+  updated_course_offering_seating_capacity INTEGER;
+BEGIN
+  SELECT COUNT(*) > 0 INTO is_valid_course_offering_identifier
+  FROM Course_Offerings CO
+  WHERE CO.course_id = course_id AND CO.launch_date = launch_date;
+  
+  IF is_valid_course_offering_identifier = FALSE THEN
+  	RAISE EXCEPTION 'Invalid course offering identifier (course_id, launch_date).';
+  END IF;
+  
+  SELECT COUNT(*) > 0 INTO is_valid_instructor
+  FROM Instructors
+  WHERE instructor_id = instructorId;
+  
+  IF is_valid_instructor = FALSE THEN
+  	RAISE EXCEPTION 'Invalid instructor identifier.';
+  END IF;
+  
+  SELECT COUNT(*) > 0 INTO is_valid_room
+  FROM Rooms
+  WHERE rid = room_id;
+  
+  IF is_valid_room = FALSE THEN
+  	RAISE EXCEPTION 'Invalid room identifier.';
+  END IF;
+  
+  SELECT CO.registration_deadline INTO registration_deadline
+  FROM Course_Offerings CO
+  WHERE CO.course_id = courseId AND CO.launch_date = launchDate;
+  
+  IF CURRENT_DATE > registration_deadline THEN
+  	RAISE EXCEPTION 'Registration deadline has passed.';
+  END IF;
+  
+  SELECT C.duration INTO duration
+  FROM Courses C
+  WHERE C.course_id = course_id;
+  
+  SELECT I.course_area_name INTO course_area_name
+  FROM Instructors I
+  WHERE I.instructor_id = instructor_id;
+
+  SELECT seating_capacity INTO session_seating_capacity
+  FROM Rooms R
+  WHERE R.rid = room_id;
+
+  SELECT seating_capacity INTO updated_course_offering_seating_capacity
+  FROM Course_Offerings CO
+  WHERE CO.course_id = courseId AND CO.launch_date = launchDate;
+
+  updated_course_offering_seating_capacity := updated_course_offering_seating_capacity + session_seating_capacity;
+  
+  INSERT INTO Course_Offering_Sessions(sid, session_date, start_time_hour, end_time_hour, launch_date, course_id) VALUES(session_number, session_date, session_start_hour, session_start_hour + duration, launchDate, courseId);
+  INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) VALUES(room_id, instructorId, session_number, course_area_name, launchDate, courseId);
+  UPDATE Course_Offerings SET seating_capacity = updated_course_offering_seating_capacity WHERE course_id = courseId AND launch_date = launchDate;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (25) pay_salary */
 CREATE OR REPLACE FUNCTION pay_salary() 
@@ -922,7 +989,6 @@ INTO last_work_day; /* This gets last day of current month. */
 
 END;
 $$ LANGUAGE plpgsql;
-
 
 /* Function (26) promote_courses (Siddarth) */
 CREATE OR REPLACE FUNCTION promote_courses()
@@ -1076,8 +1142,8 @@ BEGIN
         month := current_month;
         year := current_year;
 
-        SELECT sum(amount) 
-        FROM Employee_Pay_Slips 
+        SELECT sum(amount)
+        FROM Employee_Pay_Slips
         WHERE EXTRACT(MONTH FROM payment_date) = month AND EXTRACT(YEAR FROM payment_date) = year
         INTO total_salary_for_month;
 
