@@ -443,13 +443,11 @@ insert into Buys values(5, 2, '2021-04-02', 5);
 insert into Buys values(6, 2, '2021-04-02', 5);
 insert into Buys values(7, 2, '2021-04-02', 5);
 insert into Buys values(8, 3, '2021-04-02', 0);
-insert into Buys values(8, 7, '2021-04-02', 0);
+insert into Buys values(8, 7, '2021-04-02', 5);
 insert into Buys values(9, 3, '2021-04-02', 5);
 insert into Buys values(10, 4, '2021-04-02', 5);
 
-/* This doesn't work because the trigger prevents you from redeeming when you have no more sessions in Buys! */
--- insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 3, '2021-06-01', 10, 8, 3, '2021-04-02');
--- insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 2, '2021-06-01', 10, 8, 3, '2021-04-02');
--- insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
--- insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-03-01', 1, '2021-02-01', 2, 8, 7, '2021-04-02');
-
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 3, '2021-06-01', 10, 8, 7, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-06-01', 10, 8, 7, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-03-01', 1, '2021-02-01', 2, 8, 7, '2021-04-02');
