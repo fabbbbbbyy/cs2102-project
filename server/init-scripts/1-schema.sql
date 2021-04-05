@@ -415,21 +415,25 @@ DECLARE
   new_session_end INTEGER;
   new_session_date DATE;
 BEGIN
-  SELECT start_time_hour, end_time_hour, session_date INTO new_session_start, new_session_end, new_session_date
-  FROM Course_Offering_Sessions 
-  WHERE sid = NEW.sid AND course_id = NEW.course_id AND launch_date = NEW.launch_date;
-  
-  SELECT COUNT(sid) > 0 INTO room_already_taken
-  FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
-  WHERE rid = NEW.rid AND session_date = new_session_date
-  AND (int8range(new_session_start, new_session_start + new_session_end - new_session_start) && int8range(start_time_hour, end_time_hour));
+  IF (TG_OP = 'INSERT') OR ((TG_OP = 'UPDATE') AND NEW.rid <> OLD.rid) THEN
 
-  
-  IF room_already_taken = TRUE THEN
-  	RAISE EXCEPTION 'There exists a session which is conducted in the selected room at the same time';
-  ELSE
-  	RETURN NEW;
+    SELECT start_time_hour, end_time_hour, session_date INTO new_session_start, new_session_end, new_session_date
+    FROM Course_Offering_Sessions 
+    WHERE sid = NEW.sid AND course_id = NEW.course_id AND launch_date = NEW.launch_date;
+    
+    SELECT COUNT(sid) > 0 INTO room_already_taken
+    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+    WHERE rid = NEW.rid AND session_date = new_session_date
+    AND (int8range(new_session_start, new_session_start + new_session_end - new_session_start) && int8range(start_time_hour, end_time_hour));
+
+    IF room_already_taken = TRUE THEN
+      RAISE EXCEPTION 'There exists a session which is conducted in the selected room at the same time';
+    ELSE
+      RETURN NEW;
+    END IF;
+
   END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1007,7 +1011,84 @@ CREATE TRIGGER redeems_updates_buys
 BEFORE INSERT OR UPDATE ON Redeems
 FOR EACH ROW EXECUTE FUNCTION redeems_updates_buys_func();
 
-/* Trigger (36) Check that sessions are consecutively numbered */
+/* Trigger (36) Check if there are remaining seats before changing customers' session. - Helper for function 19 (Gerren) */
+CREATE OR REPLACE FUNCTION has_remaining_seats_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  is_same_session BOOLEAN;
+  remaining_seats INTEGER;
+BEGIN
+	SELECT COUNT(*) = 1 INTO is_same_session
+	FROM Registers
+  WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid AND cust_id = NEW.cust_id;
+
+  IF is_same_session = TRUE THEN
+    RAISE EXCEPTION 'Customer already belongs to this session.';
+  END IF;
+
+  WITH Sessions_Conducts_Rooms AS (
+  	SELECT COALESCE(SUM(Rooms.seating_capacity), 0) AS session_capacity
+    FROM Conducts NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Rooms
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid
+  ),
+  Sessions_Registers AS (
+	SELECT COUNT(*) AS num_registrations
+	FROM Registers NATURAL JOIN Course_Offering_Sessions
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid
+  )
+  SELECT (
+  	(SELECT session_capacity FROM Sessions_Conducts_Rooms) - (SELECT num_registrations FROM Sessions_Registers)
+  ) INTO remaining_seats;	
+	
+  IF (remaining_seats > 0) THEN
+    RETURN NEW;
+  ELSE
+    RAISE EXCEPTION 'Session requested is fully booked.';
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER has_remaining_seats
+BEFORE UPDATE ON Registers
+FOR EACH ROW EXECUTE FUNCTION has_remaining_seats_func();
+
+/*  Trigger (37) Check if session can be removed. - Helper for function 23 (Gerren) */
+CREATE OR REPLACE FUNCTION remove_session_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	session_start_time INTEGER;
+  session_start_date DATE;
+  num_registrations INTEGER;
+BEGIN
+	SELECT start_time_hour, session_date INTO session_start_time, session_start_date
+  FROM Course_Offering_Sessions
+  WHERE sid = OLD.sid AND course_id = OLD.course_id AND launch_date = OLD.launch_date;
+  
+  SELECT COUNT(*) INTO num_registrations
+  FROM Registers
+  WHERE sid = OLD.sid AND course_id = OLD.course_id AND launch_date = OLD.launch_date;
+	
+  IF CURRENT_DATE > session_start_date THEN
+  	RAISE EXCEPTION 'Session has already commenced.';
+  END IF;
+  
+  IF CURRENT_DATE = session_start_date AND extract(hour from now()) >= session_start_time THEN
+  	RAISE EXCEPTION 'Session has already commenced.';
+  END IF;
+  
+  IF num_registrations > 0 THEN
+    RAISE EXCEPTION 'Session has customers registered.';
+  ELSE
+    RETURN OLD;
+  END IF;	
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER remove_session_verification
+BEFORE DELETE ON Course_Offering_Sessions
+FOR EACH ROW EXECUTE FUNCTION remove_session_verification_func();
+                                                   
+/* Trigger (38) Check that sessions are consecutively numbered */
 CREATE OR REPLACE FUNCTION consecutive_session_numbering_func()
 RETURNS TRIGGER AS $$
 DECLARE
