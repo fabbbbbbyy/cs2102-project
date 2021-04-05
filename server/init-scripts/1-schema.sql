@@ -25,7 +25,7 @@ create table Course_Packages (
     sale_start_date date not null,
     sale_end_date date not null,
 
-  	check(sale_end_date >= sale_start_date)
+  	CONSTRAINT sale_start_before_end check(sale_end_date >= sale_start_date)
 );
 
 /* (CORRECT) */
@@ -36,7 +36,8 @@ create table Credit_Cards (
   /* CVV must be three digit, integer might not be able to save 089 */
   cvv text not null,
   
-  check(expiry_date >= from_date)
+  CONSTRAINT does_not_expire_before_from_date check(expiry_date >= from_date),
+  CONSTRAINT does_not_expire_before_current_date check(expiry_date > current_date)
 );
 
 /* (CORRECT) */
@@ -64,7 +65,7 @@ create table Employees (
     /* Assume that user is from Singapore, starting digit must be 6, 8, 9, 8 digit number, check in range*/
     phone_num text,
   
-  	check(depart_date >= join_date)
+  	CONSTRAINT employee_joins_before_departing check(depart_date >= join_date)
 );
 
 /* (CORRECT) */
@@ -151,7 +152,7 @@ create table Full_Time_Instructors (
 create table Courses (
     course_id serial primary key,
     description text not null,
-    title text not null,
+    title text unique not null,
     duration integer not null check(duration > 0),
     course_area_name text not null references Course_Areas  
 );
@@ -173,8 +174,8 @@ create table Course_Offerings (
     target_number_registrations integer not null check(target_number_registrations > 0),
     primary key(course_id, launch_date),
   
-    check(end_date >= start_date),
-  	check(registration_deadline + 10 <= start_date)
+    CONSTRAINT offering_date_starts_before_end check(end_date >= start_date),
+  	CONSTRAINT registration_deadline_ten_days_before_start check(registration_deadline + 10 <= start_date)
 );
 
 /* (CORRECT) */
@@ -196,8 +197,8 @@ create table Course_Offering_Sessions (
     foreign key(course_id, launch_date) references Course_Offerings
           on delete cascade,
 
-    check(extract(isodow from session_date) in (1, 2, 3, 4, 5)),
-  	check(end_time_hour > start_time_hour)
+    CONSTRAINT session_on_weekdays check(extract(isodow from session_date) in (1, 2, 3, 4, 5)),
+  	CONSTRAINT session_time_starts_before_end check(end_time_hour > start_time_hour)
 );
 
 /* (CORRECT) */
@@ -241,7 +242,9 @@ create table Registers (
   	course_id integer,
     primary key(cust_id, register_date, sid, launch_date, course_id),
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
-  	  	on delete cascade
+  	  	on delete cascade,
+
+    CONSTRAINT register_date_before_launch_date check(register_date >= launch_date)
 );
 
 /* (CORRECT) */
@@ -269,5 +272,7 @@ create table Redeems (
     foreign key(cust_id, package_id, purchase_date) references Buys
         on delete cascade,
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
-        on delete cascade
+        on delete cascade,
+
+    CONSTRAINT redemption_date_before_launch_date check(redemption_date >= launch_date)
 );
