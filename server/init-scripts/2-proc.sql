@@ -189,7 +189,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (4) update_credit_card */
+/* Function (4) update_credit_card (Kevin) */
+CREATE OR REPLACE PROCEDURE update_credit_card(customer_id INTEGER, credit_card_no TEXT, expiration_date DATE, CVV_code TEXT)
+AS $$
+DECLARE
+  previous_credit_card_num TEXT;
+BEGIN
+  SELECT credit_card_num INTO previous_credit_card_num
+  FROM Customers C
+  WHERE C.cust_id = customer_id;
+
+  IF previous_credit_card_num IS NULL THEN
+  	RAISE EXCEPTION 'Invalid customer ID.';
+  END IF;
+
+  DELETE FROM Credit_Cards WHERE credit_card_num = previous_credit_card_num;
+  INSERT INTO Credit_Cards(credit_card_num, expiry_date, from_date, cvv) VALUES(credit_card_no, expiration_date, CURRENT_DATE, CVV_code);
+
+  UPDATE Customers
+  SET credit_card_num = credit_card_no
+  WHERE cust_id = customer_id;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (5) add_course */
 CREATE OR REPLACE PROCEDURE add_course(course_description text, course_title text, duration integer,
@@ -298,7 +319,41 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (8) find_rooms */
+/* Function (8) find_rooms (Kevin) */
+CREATE OR REPLACE FUNCTION find_rooms(date_to_check DATE, session_start_hour INTEGER, session_duration INTEGER)
+RETURNS TABLE(room_id INTEGER) AS $$
+DECLARE
+  is_weekend BOOLEAN := EXTRACT(isodow from date_to_check) in (6, 7);
+  session_end_hour INTEGER := session_start_hour + session_duration;
+BEGIN
+  IF is_weekend = TRUE THEN
+  	RAISE EXCEPTION 'Session cannot fall on a weekend.';
+  END IF;
+  
+  IF session_duration <= 0 OR session_duration > 4 THEN
+  	RAISE EXCEPTION 'Session duration must be between 1-4 hours long.';
+  END IF;
+
+  IF ((session_start_hour >= 9 AND session_end_hour <= 12) OR (session_start_hour >= 14 AND session_end_hour <= 18)) = FALSE THEN
+  	RAISE EXCEPTION 'Session must fall between 9am to 12pm or 2pm to 6pm';
+  END IF;
+
+	WITH Joined AS (
+    SELECT *
+    FROM Conducts NATURAL JOIN Course_Offering_Sessions)
+  SELECT rid
+  FROM Rooms
+  EXCEPT
+  SELECT rid
+  FROM Joined
+  WHERE (
+	Joined.session_date = date_to_check AND (
+		(session_start_hour <= Joined.start_time_hour AND session_end_hour > Joined.start_time_hour) OR
+		(session_start_hour < Joined.end_time_hour AND session_end_hour >= Joined.end_time_hour) OR
+		(session_start_hour <= Joined.start_time_hour AND session_end_hour >= Joined.end_time_hour) OR
+		(session_start_hour >= Joined.start_time_hour AND session_end_hour <= Joined.end_time_hour)));
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (9) get_available_rooms */
 
@@ -313,7 +368,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (12) get_available_course_packages */
+/* Function (12) get_available_course_packages (Kevin) */
+CREATE OR REPLACE FUNCTION get_available_course_packages()
+RETURNS TABLE(name TEXT, num_free_registrations INTEGER, sale_end_date DATE, price NUMERIC) AS $$
+BEGIN
+  SELECT CP.course_package_name, CP.num_free_registrations, CP.sale_end_date, CP.price
+  FROM Course_Packages CP
+  WHERE CP.sale_start_date <= CURRENT_DATE AND CP.sale_end_date >= CURRENT_DATE;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (13) buy_course_package */
 CREATE OR REPLACE PROCEDURE buy_course_package(customer_id integer, course_package_id integer) 
@@ -405,7 +468,33 @@ RETURNS TABLE(course_title TEXT, course_area TEXT, start_date DATE, end_date DAT
   ORDER BY CO.registration_deadline, C.title;
 $$ LANGUAGE sql;
 
-/* Function (16) get_available_course_sessions */
+/* Function (16) get_available_course_sessions (Kevin) */
+CREATE OR REPLACE FUNCTION get_available_course_sessions(courseId INTEGER, launchDate DATE)
+RETURNS TABLE(session_date DATE, start_time INTEGER, name TEXT, number_remaining_seats INTEGER) AS $$
+DECLARE
+  deadline DATE;
+BEGIN
+  SELECT registration_deadline FROM Course_Offerings WHERE (course_id = courseId AND launch_date = launchDate) INTO deadline;
+  
+  IF deadline < CURRENT_DATE THEN
+    RAISE EXCEPTION 'Registration deadline for the course is over.';
+  END IF;
+  
+  WITH C AS (
+    SELECT *
+    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Instructors NATURAL JOIN Rooms),
+  Result AS (
+	SELECT C.session_date, C.start_time_hour, (SELECT employee_name FROM Employees WHERE eid = C.instructor_id),
+	  C.seating_capacity - (SELECT CAST(COUNT(*) AS INT) FROM Registers WHERE Registers.sid = C.sid) AS number_remaining_seats
+    FROM C
+    WHERE C.course_id = courseId AND C.launch_date = launchDate
+    GROUP BY C.sid, C.session_date, C.start_time_hour, C.instructor_id, C.seating_capacity)
+  SELECT *
+  FROM Result
+  WHERE Result.number_remaining_seats > 0
+  ORDER BY session_date, start_time ASC;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (17) register_session */
 CREATE OR REPLACE PROCEDURE register_session(customer_id integer, _course_id integer, _launch_date date,
@@ -681,6 +770,73 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (24) add_session */
+CREATE OR REPLACE PROCEDURE add_session(courseId INTEGER, launchDate DATE, session_number INTEGER, session_date DATE, session_start_hour INTEGER, instructorId INTEGER, room_id INTEGER)
+AS $$
+DECLARE
+  is_valid_course_offering_identifier BOOLEAN;
+  is_valid_instructor BOOLEAN;
+  is_valid_room BOOLEAN;
+  registration_deadline DATE;
+  duration INTEGER;
+  course_area_name TEXT;
+  session_seating_capacity INTEGER;
+  updated_course_offering_seating_capacity INTEGER;
+BEGIN
+  SELECT COUNT(*) > 0 INTO is_valid_course_offering_identifier
+  FROM Course_Offerings CO
+  WHERE CO.course_id = course_id AND CO.launch_date = launch_date;
+  
+  IF is_valid_course_offering_identifier = FALSE THEN
+  	RAISE EXCEPTION 'Invalid course offering identifier (course_id, launch_date).';
+  END IF;
+  
+  SELECT COUNT(*) > 0 INTO is_valid_instructor
+  FROM Instructors
+  WHERE instructor_id = instructorId;
+  
+  IF is_valid_instructor = FALSE THEN
+  	RAISE EXCEPTION 'Invalid instructor identifier.';
+  END IF;
+  
+  SELECT COUNT(*) > 0 INTO is_valid_room
+  FROM Rooms
+  WHERE rid = room_id;
+  
+  IF is_valid_room = FALSE THEN
+  	RAISE EXCEPTION 'Invalid room identifier.';
+  END IF;
+  
+  SELECT CO.registration_deadline INTO registration_deadline
+  FROM Course_Offerings CO
+  WHERE CO.course_id = courseId AND CO.launch_date = launchDate;
+  
+  IF CURRENT_DATE > registration_deadline THEN
+  	RAISE EXCEPTION 'Registration deadline has passed.';
+  END IF;
+  
+  SELECT C.duration INTO duration
+  FROM Courses C
+  WHERE C.course_id = course_id;
+  
+  SELECT I.course_area_name INTO course_area_name
+  FROM Instructors I
+  WHERE I.instructor_id = instructor_id;
+
+  SELECT seating_capacity INTO session_seating_capacity
+  FROM Rooms R
+  WHERE R.rid = room_id;
+
+  SELECT seating_capacity INTO updated_course_offering_seating_capacity
+  FROM Course_Offerings CO
+  WHERE CO.course_id = courseId AND CO.launch_date = launchDate;
+
+  updated_course_offering_seating_capacity := updated_course_offering_seating_capacity + session_seating_capacity;
+  
+  INSERT INTO Course_Offering_Sessions(sid, session_date, start_time_hour, end_time_hour, launch_date, course_id) VALUES(session_number, session_date, session_start_hour, session_start_hour + duration, launchDate, courseId);
+  INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) VALUES(room_id, instructorId, session_number, course_area_name, launchDate, courseId);
+  UPDATE Course_Offerings SET seating_capacity = updated_course_offering_seating_capacity WHERE course_id = courseId AND launch_date = launchDate;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (25) pay_salary */
 CREATE OR REPLACE FUNCTION pay_salary() 
@@ -794,7 +950,6 @@ INTO last_work_day; /* This gets last day of current month. */
 END;
 $$ LANGUAGE plpgsql;
 
-
 /* Function (26) promote_courses (Siddarth) */
 CREATE OR REPLACE FUNCTION promote_courses()
 RETURNS TABLE(customer_id integer, customer_name text, course_area_name text, course_id integer, course_title text, launch_date date, registration_deadline date, fees numeric) AS $$
@@ -875,7 +1030,57 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (28) popular_courses */
+/* Function (28) popular_courses (Kevin) */
+CREATE OR REPLACE FUNCTION popular_courses()
+RETURNS TABLE (course_id INTEGER, course_title TEXT, course_area_name TEXT, num_offerings INTEGER, latest_offering_num_registrations INTEGER) AS $$
+BEGIN
+  WITH Filtered_Courses AS (
+    SELECT C.course_id AS course_id, C.title AS title,
+    C.course_area_name AS course_area_name, CAST(COUNT(*) AS INTEGER) AS num_offerings
+    FROM Courses C NATURAL JOIN Course_Offerings CO
+    WHERE EXTRACT(YEAR FROM CO.start_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+    GROUP BY C.course_id, C.title, C.course_area_name
+    HAVING COUNT(*) >= 2),
+  Offering_Registrations AS (
+    SELECT F.course_id AS course_id, C.launch_date AS launch_date, C.start_date AS start_date,
+	COALESCE(
+		(SELECT CAST(COUNT(*) AS INTEGER)
+	    FROM Registers R
+	 	WHERE R.course_id = F.course_id AND launch_date = C.launch_date
+	 	GROUP BY F.course_id, C.launch_date), 0) AS num_registrations
+    FROM Filtered_Courses F NATURAL JOIN Course_Offerings C NATURAL JOIN Course_Offering_Sessions S
+    GROUP BY F.course_id, C.launch_date, C.start_date),
+  Latest_Offering_Registrations AS (
+  	SELECT OR1.course_id AS course_id, OR1.launch_date AS launch_date, OR1.start_date AS start_date, OR1.num_registrations AS latest_num_registrations
+    FROM Offering_Registrations OR1
+    WHERE (OR1.course_id, OR1.launch_date, OR1.start_date) IN (
+      SELECT OR2.course_id, OR2.launch_date, OR2.start_date
+      FROM Offering_Registrations OR2
+	  WHERE OR1.course_id = OR2.course_id
+      ORDER BY OR2.start_date DESC
+      LIMIT 1)),
+  Intermediate_Combined AS (
+	SELECT F.course_id AS course_id, F.title AS title, F.course_area_name AS course_area_name, F.num_offerings AS num_offerings,
+    L.latest_num_registrations AS latest_num_registrations
+	FROM Filtered_Courses F NATURAL JOIN Latest_Offering_Registrations L),
+  Combined1 AS (
+    SELECT IC.course_id AS course_id, IC.title AS title, IC.course_area_name AS course_area_name, IC.num_offerings AS num_offerings,
+    O.num_registrations AS num_registrations, IC.latest_num_registrations AS latest_num_registrations, O.start_date AS start_date
+    FROM Intermediate_Combined IC NATURAL JOIN Offering_Registrations O),
+  Combined2 AS (
+    SELECT C.course_id AS course_id, C.title AS title, C.course_area_name AS course_area_name, C.num_offerings AS num_offerings,
+    C.num_registrations AS num_registrations2, C.latest_num_registrations AS latest_num_registrations, C.start_date AS start_date2
+    FROM Combined1 C)
+  SELECT DISTINCT C.course_id AS course_id, C.title AS title, C.course_area_name AS course_area_name,
+    CAST(C.num_offerings AS INTEGER) AS num_offerings, CAST(C.latest_num_registrations AS INTEGER) AS latest_num_registrations
+  FROM (Combined1 NATURAL JOIN Combined2) C
+  WHERE C.course_id NOT IN (
+    SELECT C3.course_id
+    FROM Combined1 C3 INNER JOIN Combined2 C4 ON (C3.course_id = C4.course_id AND C3.title = C4.title AND C3.course_area_name = C4.course_area_name AND C3.num_offerings = C4.num_offerings AND C3.latest_num_registrations = C4.latest_num_registrations)
+    WHERE C3.start_date < C4.start_date2 AND C3.num_registrations >= C4.num_registrations2)
+  ORDER BY latest_num_registrations DESC, course_id ASC;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (29) view_summary_report */
 CREATE OR REPLACE FUNCTION view_summary_report(number_of_months integer) 
@@ -897,8 +1102,8 @@ BEGIN
         month := current_month;
         year := current_year;
 
-        SELECT sum(amount) 
-        FROM Employee_Pay_Slips 
+        SELECT sum(amount)
+        FROM Employee_Pay_Slips
         WHERE EXTRACT(MONTH FROM payment_date) = month AND EXTRACT(YEAR FROM payment_date) = year
         INTO total_salary_for_month;
 

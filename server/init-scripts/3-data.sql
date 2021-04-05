@@ -244,17 +244,17 @@ insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(9, '2021-08-01', 19, '2021-09-01', '2021-10-01', 450, '2021-08-15', 70, 70);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(10, '2021-06-01', 20, '2021-07-01', '2021-08-01', 450, '2021-06-15', 70, 70);
 
-insert into Rooms(seating_capacity, location) values(10, 'Kevin and Agnes Main House');
-insert into Rooms(seating_capacity, location) values(20, 'Kevin and Agnes Bedroom');
-insert into Rooms(seating_capacity, location) values(30, 'Kevin and Agnes Living Room');
-insert into Rooms(seating_capacity, location) values(40, 'Kevin and Agnes Toilet');
-insert into Rooms(seating_capacity, location) values(10, 'Kevin and Agnes Underground Dungeon');
-insert into Rooms(seating_capacity, location) values(20, 'Kevin and Agnes Tuition Centre');
-insert into Rooms(seating_capacity, location) values(30, 'Kevin and Agnes Google Office');
-insert into Rooms(seating_capacity, location) values(40, 'Kevin and Agnes Kitchen');
-insert into Rooms(seating_capacity, location) values(5, 'Kevin and Agnes Babyroom');
-insert into Rooms(seating_capacity, location) values(15, 'Kevin and Agnes Third House');
-insert into Rooms(seating_capacity, location) values(25, 'Kevin and Agnes Mansion');
+insert into Rooms(seating_capacity, location) values(10, 'Kevin Main House');
+insert into Rooms(seating_capacity, location) values(20, 'Kevin Bedroom');
+insert into Rooms(seating_capacity, location) values(30, 'Kevin Living Room');
+insert into Rooms(seating_capacity, location) values(40, 'Kevin Toilet');
+insert into Rooms(seating_capacity, location) values(10, 'Kevin Underground Dungeon');
+insert into Rooms(seating_capacity, location) values(20, 'Kevin Tuition Centre');
+insert into Rooms(seating_capacity, location) values(30, 'Kevin Google Office');
+insert into Rooms(seating_capacity, location) values(40, 'Kevin Kitchen');
+insert into Rooms(seating_capacity, location) values(5, 'Kevin Garden');
+insert into Rooms(seating_capacity, location) values(15, 'Kevin Third House');
+insert into Rooms(seating_capacity, location) values(25, 'Kevin Mansion');
 
 BEGIN TRANSACTION;
 SET CONSTRAINTS check_all_course_offering_session_is_being_conducted_trigger DEFERRED;

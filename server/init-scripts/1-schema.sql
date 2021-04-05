@@ -176,7 +176,7 @@ create table Course_Offerings (
     end_date date,
     fees numeric not null,
     registration_deadline date not null,
-    seating_capacity integer not null check(seating_capacity > 0), 
+    seating_capacity integer not null check(seating_capacity >= 0), /* Could be 0 for new course offering */ 
     target_number_registrations integer not null check(target_number_registrations > 0),
     primary key(course_id, launch_date),
   
@@ -343,6 +343,28 @@ FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 /* Trigger (3) For each course, a customer can register for at most one of its sessions before the registration deadline (Kevin) */
 
 /* Trigger (4) The seating capacity of a course offering is equal to the sum of the seating capacities of all its sessions (Kevin) */
+/* Insert case handled by add_session; not possible to insert into sessions directly because of constraint with conducts */
+
+CREATE OR REPLACE FUNCTION change_course_offering_seating_capacity_on_session_change_func()
+RETURNS TRIGGER AS $$
+DECLARE
+    updated_offering_seating_capacity INTEGER;
+BEGIN
+    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
+    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+
+    UPDATE Course_Offerings
+    SET seating_capacity = updated_offering_seating_capacity
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+
+  	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER change_course_offering_seating_capacity_on_session_change
+AFTER DELETE OR UPDATE ON Course_Offering_Sessions
+FOR EACH ROW EXECUTE FUNCTION change_course_offering_seating_capacity_on_session_change_func();
 
 /* Trigger (5) Each customer can have at most one active or partially active package (Fabian) */
 CREATE OR REPLACE FUNCTION customer_one_package_verification_func() 
@@ -757,7 +779,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE CONSTRAINT TRIGGER check_all_course_offering_session_is_being_conducted_trigger
 AFTER INSERT OR UPDATE ON Course_Offering_Sessions
-DEFERRABLE INITIAlLY IMMEDIATE
+DEFERRABLE INITIAlLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION check_all_course_offering_session_is_being_conducted();
 
 /* Trigger (21) Trigger that ensures every credit card references at least one customer (Gerren) */
@@ -1065,3 +1087,27 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER remove_session_verification
 BEFORE DELETE ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION remove_session_verification_func();
+                                                   
+/* Trigger (38) Check that sessions are consecutively numbered */
+CREATE OR REPLACE FUNCTION consecutive_session_numbering_func()
+RETURNS TRIGGER AS $$
+DECLARE
+    max_sid INTEGER;
+BEGIN
+    SELECT sid INTO max_sid
+    FROM Course_Offering_Sessions S
+    WHERE S.course_id = NEW.course_id AND S.launch_date = NEW.launch_date
+    ORDER BY sid DESC
+    LIMIT 1;
+  
+    IF NEW.sid <> max_sid + 1 THEN
+  	    RAISE EXCEPTION 'Incorrect session number (next session number is %)', max_sid + 1;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER consecutive_session_numbering
+BEFORE INSERT ON Course_Offering_Sessions
+FOR EACH ROW EXECUTE FUNCTION consecutive_session_numbering_func();
