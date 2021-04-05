@@ -342,13 +342,12 @@ FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 
 /* Trigger (4) The seating capacity of a course offering is equal to the sum of the seating capacities of all its sessions (Kevin) */
 /* Insert case handled by add_session; not possible to insert into sessions directly because of constraint with conducts */
-/* Look into using Conducts instead */
-/* Add trigger to check that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated */
-CREATE OR REPLACE FUNCTION change_course_offering_seating_capacity_on_session_change_func()
+CREATE OR REPLACE FUNCTION change_course_offering_seating_capacity_on_conducts_change_func()
 RETURNS TRIGGER AS $$
 DECLARE
     updated_offering_seating_capacity INTEGER;
 BEGIN
+
     SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
@@ -361,9 +360,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER change_course_offering_seating_capacity_on_session_change
-AFTER DELETE OR UPDATE ON Course_Offering_Sessions
-FOR EACH ROW EXECUTE FUNCTION change_course_offering_seating_capacity_on_session_change_func();
+CREATE TRIGGER change_course_offering_seating_capacity_on_conducts_change
+AFTER INSERT OR DELETE OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION change_course_offering_seating_capacity_on_conducts_change_func();
+
+/* Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated */
+CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_offering_seating_capacity INTEGER;
+BEGIN
+    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO course_offering_seating_capacity
+    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+
+    IF NEW.seating_capacity <> course_offering_seating_capacity THEN
+        RAISE EXCEPTION 'Course offering seating capacity must be equal to the sum of all of its session seating capacities.';
+    END IF;
+
+  	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verify_course_offering_seating_capacity
+BEFORE INSERT OR UPDATE ON Course_Offerings
+FOR EACH ROW EXECUTE FUNCTION verify_course_offering_seating_capacity_func();
 
 /* Trigger (5) Each customer can have at most one active or partially active package (Fabian) */
 CREATE OR REPLACE FUNCTION customer_one_package_verification_func() 
