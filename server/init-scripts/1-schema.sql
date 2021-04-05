@@ -893,8 +893,56 @@ BEFORE INSERT OR UPDATE ON Registers
 FOR EACH ROW EXECUTE FUNCTION ensure_register_date_earlier_than_registration_deadline();
 
 /* Trigger (24) Check if a Customer is trying to Register for a session he has already Redeemed. (Siddarth) */
+CREATE OR REPLACE FUNCTION check_if_course_offering_session_already_redeemed()
+RETURNS TRIGGER AS $$
+DECLARE
+    is_session_redeemed_already BOOLEAN;
+BEGIN
+    SELECT COUNT(*) > 0 INTO is_session_redeemed_already
+    FROM Redeems
+    WHERE cust_id = NEW.cust_id
+    and sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    IF is_session_redeemed_already THEN
+        RAISE EXCEPTION 'Course offering session is already redeemed.';
+    ELSE
+        RETURN NEW;
+    END IF;
+
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_course_offering_session_not_redeemed
+BEFORE INSERT OR UPDATE ON Registers
+FOR EACH ROW EXECUTE FUNCTION check_if_course_offering_session_already_redeemed();
 
 /* Trigger (25) Check if a Customer is trying to Redeem for a session he has already Registered. (Siddarth) */
+CREATE OR REPLACE FUNCTION check_if_course_offering_session_already_registered()
+RETURNS TRIGGER AS $$
+DECLARE
+    is_session_registered_already BOOLEAN;
+BEGIN
+    SELECT COUNT(*) > 0 INTO is_session_registered_already
+    FROM Registers
+    WHERE cust_id = NEW.cust_id
+    and sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    IF is_session_registered_already THEN
+        RAISE EXCEPTION 'Course offering session is already registered.';
+    ELSE
+        RETURN NEW;
+    END IF;
+
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_course_offering_session_not_registered
+BEFORE INSERT OR UPDATE ON Redeems
+FOR EACH ROW EXECUTE FUNCTION check_if_course_offering_session_already_registered();
 
 /* Trigger (26) Check if end_time_hour - start_time_hour = duration from Courses (Siddarth)*/
 CREATE OR REPLACE FUNCTION ensure_start_and_end_of_course_session_matches_course_duration()
