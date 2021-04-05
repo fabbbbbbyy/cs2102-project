@@ -27,7 +27,7 @@ create table Course_Packages (
     sale_start_date date not null,
     sale_end_date date not null,
 
-  	check(sale_end_date >= sale_start_date)
+  	CONSTRAINT sale_start_before_end check(sale_end_date >= sale_start_date)
 );
 
 /* (CORRECT) */
@@ -38,8 +38,9 @@ create table Credit_Cards (
   /* CVV must be three digit, integer might not be able to save 089 */
   cvv text not null,
   
+  CONSTRAINT does_not_expire_before_from_date check(expiry_date >= from_date),
+  CONSTRAINT does_not_expire_before_current_date check(expiry_date > current_date),
   check(credit_card_num similar to '[0-9]+'),
-  check(expiry_date >= from_date),
   check(cvv similar to '[0-9]{3}')
 );
 
@@ -68,7 +69,7 @@ create table Employees (
     /* Assume that user is from Singapore, starting digit must be 6, 8, 9, 8 digit number, check in range*/
     phone_num text,
   
-  	check(depart_date >= join_date)
+  	CONSTRAINT employee_joins_before_departing check(depart_date >= join_date)
 );
 
 /* (CORRECT) */
@@ -155,7 +156,7 @@ create table Full_Time_Instructors (
 create table Courses (
     course_id serial primary key,
     description text not null,
-    title text not null,
+    title text unique not null,
     duration integer not null check(duration > 0),
     course_area_name text not null references Course_Areas,
 
@@ -179,9 +180,9 @@ create table Course_Offerings (
     target_number_registrations integer not null check(target_number_registrations > 0),
     primary key(course_id, launch_date),
   
-    check(start_date >= launch_date),
-    check(end_date >= start_date),
-  	check(registration_deadline + 10 <= start_date)
+    CONSTRAINT offering_date_starts_before_end check(end_date >= start_date),
+  	CONSTRAINT registration_deadline_ten_days_before_start check(registration_deadline + 10 <= start_date),
+    CONSTRAINT offering_date_starts_after_launch check(start_date >= launch_date)
 );
 
 /* (CORRECT) */
@@ -203,8 +204,8 @@ create table Course_Offering_Sessions (
     foreign key(course_id, launch_date) references Course_Offerings
           on delete cascade,
 
-    check(extract(isodow from session_date) in (1, 2, 3, 4, 5)),
-  	check(end_time_hour > start_time_hour)
+    CONSTRAINT session_on_weekdays check(extract(isodow from session_date) in (1, 2, 3, 4, 5)),
+  	CONSTRAINT session_time_starts_before_end check(end_time_hour > start_time_hour)
 );
 
 /* (CORRECT) */
@@ -249,7 +250,8 @@ create table Registers (
     primary key(cust_id, register_date, sid, launch_date, course_id),
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
   	  	on delete cascade,
-    constraint register_date_before_launch_date check(register_date >= launch_date)
+
+    CONSTRAINT register_date_before_launch_date check(register_date >= launch_date)
 );
 
 /* (CORRECT) */
@@ -277,7 +279,9 @@ create table Redeems (
     foreign key(cust_id, package_id, purchase_date) references Buys
         on delete cascade,
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
-        on delete cascade
+        on delete cascade,
+
+    CONSTRAINT redemption_date_before_launch_date check(redemption_date >= launch_date)
 );
 
 /* SQL commands to create application triggers */
@@ -341,6 +345,42 @@ FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 /* Trigger (4) The seating capacity of a course offering is equal to the sum of the seating capacities of all its sessions (Kevin) */
 
 /* Trigger (5) Each customer can have at most one active or partially active package (Fabian) */
+CREATE OR REPLACE FUNCTION customer_one_package_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+    current_date DATE;
+    num_active_packages integer;
+    num_partially_active_packages integer;
+BEGIN
+    SELECT CURRENT_DATE INTO current_date;
+
+    SELECT COUNT(*) into num_active_packages 
+    FROM Buys
+    WHERE cust_id = NEW.cust_id
+    AND num_remaining_redemptions > 0;
+
+    IF (num_active_packages > 0) THEN
+  	    RAISE EXCEPTION 'This customer already has an active package.';
+    ELSE 
+        RETURN NEW;
+    END IF;
+
+    SELECT COUNT(*) into num_partially_active_packages 
+    FROM Buys Natural Join Redeems Natural Join Course_Offering_Sessions
+    WHERE cust_id = NEW.cust_id
+    AND (EXTRACT(DAY FROM current_date) - EXTRACT(DAY FROM session_date) >= 7);
+
+    IF (num_partially_active_packages > 0) THEN 
+        RAISE EXCEPTION 'This customer already has a partially active package.'; 
+    ELSE 
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER customer_one_package_verification
+BEFORE INSERT ON Buys
+FOR EACH ROW EXECUTE FUNCTION customer_one_package_verification_func();
 
 /* Trigger (6) Upon updating of cancel table, update the redeem and customer package (Kevin) */
 
@@ -382,8 +422,8 @@ DECLARE
 	num_same_eid_records integer;
 BEGIN
 	SELECT COUNT(*) INTO num_same_eid_records
-  FROM Full_Time_Employees FTE
-  WHERE FTE.eid = NEW.eid;
+  FROM Full_Time_Employees
+  WHERE eid = NEW.eid;
   
 	IF num_same_eid_records > 0 THEN
   	RAISE EXCEPTION 'This employee is already a full time employee, and therefore cannot be a part time employee.';
@@ -403,8 +443,8 @@ DECLARE
 	num_same_eid_records integer;
 BEGIN
 	SELECT COUNT(*) INTO num_same_eid_records
-  FROM Part_Time_Employees PTE
-  WHERE PTE.eid = NEW.eid;
+  FROM Part_Time_Employees 
+  WHERE eid = NEW.eid;
   
 	IF num_same_eid_records > 0 THEN
   	RAISE EXCEPTION 'This employee is already a part time employee, and therefore cannot be a full time employee.';
@@ -423,25 +463,16 @@ CREATE OR REPLACE FUNCTION manager_employee_verification_func()
 RETURNS TRIGGER AS $$
 DECLARE
 	num_same_eid_records integer;
-    num_instructor_same_eid_records integer;
 BEGIN
 	SELECT COUNT(*) INTO num_same_eid_records
-    FROM Administrators A
-    WHERE A.eid = NEW.eid;
-
-    SELECT COUNT(*) INTO num_instructor_same_eid_records
-    FROM Instructors
-    WHERE instructor_id = NEW.eid;
+  FROM Administrators A
+  WHERE A.eid = NEW.eid;
   
 	IF num_same_eid_records > 0 THEN
-  	    RAISE EXCEPTION 'This employee is already an administrator, and therefore cannot be a manager.';
-    END IF;
-    
-    IF num_instructor_same_eid_records > 0 THEN
-        RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be a manager.';
-    END IF; 
-    
-    RETURN NEW;
+  	RAISE EXCEPTION 'This employee is already an administrator, and therefore cannot be a manager.';
+  ELSE 
+  	RETURN NEW;
+  END IF;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -453,25 +484,16 @@ CREATE OR REPLACE FUNCTION administrator_employee_verification_func()
 RETURNS TRIGGER AS $$
 DECLARE
 	num_same_eid_records integer;
-    num_instructor_same_eid_records integer;
 BEGIN
 	SELECT COUNT(*) INTO num_same_eid_records
-    FROM Managers M
-    WHERE M.eid = NEW.eid;
-
-    SELECT COUNT(*) INTO num_instructor_same_eid_records
-    FROM Instructors
-    WHERE instructor_id = NEW.eid;
+  FROM Managers M
+  WHERE M.eid = NEW.eid;
   
 	IF num_same_eid_records > 0 THEN
-  	    RAISE EXCEPTION 'This employee is already a manager, and therefore cannot be an administrator.';
-    END IF;
-
-    IF num_instructor_same_eid_records > 0 THEN
-        RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be a administrator.';
-    END IF;
-
-    RETURN NEW;
+  	RAISE EXCEPTION 'This employee is already a manager, and therefore cannot be an administrator.';
+  ELSE 
+  	RETURN NEW;
+  END IF;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -622,6 +644,45 @@ BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour();
 
 /* Trigger (14) Each instructor must not be assigned to teach two consecutive course sessions, there must be at least a one hour beak between sessions (Fabian) */
+CREATE OR REPLACE FUNCTION instructor_has_break_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_records_with_not_enough_break_time integer;
+BEGIN
+	WITH Already_Conducting AS (
+    SELECT * 
+    FROM Conducts Natural Join Course_Offering_Sessions
+    WHERE instructor_id = NEW.instructor_id
+  ),
+  New_Conducting AS (
+    SELECT * 
+    FROM Course_Offering_Sessions 
+    WHERE sid = NEW.sid
+    AND launch_date = NEW.launch_date
+    AND course_id = NEW.course_id
+  ),
+  Same_Date_Sessions AS (
+    SELECT AC.start_time_hour as start_time, AC.end_time_hour as end_time, NC.start_time_hour as start_time_2, NC.end_time_hour as end_time_2
+    FROM Already_Conducting AC, New_Conducting NC
+    WHERE AC.session_date = NC.session_date
+  )
+  SELECT COUNT(*) 
+  FROM Same_Date_Sessions
+  WHERE end_time + 1 = start_time_2
+  OR start_time - 1 = end_time_2
+  INTO num_records_with_not_enough_break_time;
+
+  IF num_records_with_not_enough_break_time THEN
+    	RAISE EXCEPTION 'There must be at least an hour break between the teaching sessions!';
+  ELSE
+    	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER instructor_has_break_verification
+BEFORE INSERT OR UPDATE ON Conducts
+FOR EACH ROW EXECUTE FUNCTION instructor_has_break_verification_func();
 
 /* Trigger (15) Each part-time instructor must not teach more than 30 hours each month (Gerren) */
 CREATE OR REPLACE FUNCTION part_time_instructor_conduct_verification_func() 
@@ -718,6 +779,29 @@ BEFORE INSERT OR UPDATE ON Credit_Cards
 FOR EACH ROW EXECUTE FUNCTION credit_card_verification_func();
 
 /* Trigger (22) Every customer can register for at most 1 session from the same course_offering (Fabian) */
+CREATE OR REPLACE FUNCTION customer_one_session_from_same_course_offering_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+	num_same_course_offering_session_registered integer;
+BEGIN
+	SELECT COUNT(*) into num_same_course_offering_session_registered 
+  FROM Registers R
+  WHERE R.cust_id = NEW.cust_id
+  AND R.sid = NEW.sid
+  AND R.launch_date = NEW.launch_date
+  AND R.course_id = NEW.course_id;
+  
+  IF (num_same_course_offering_session_registered > 0) THEN
+  	RAISE EXCEPTION 'This customer already has a session with the same course offering registered.';
+  ELSE 
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER customer_one_session_from_same_course_offering_verification
+BEFORE INSERT OR UPDATE ON Registers
+FOR EACH ROW EXECUTE FUNCTION customer_one_session_from_same_course_offering_verification_func();
 
 /* Trigger (23) Ensure register date cannot be later than registration deadline and before launch date of course offering (Siddarth) */
 CREATE OR REPLACE FUNCTION ensure_register_date_earlier_than_registration_deadline()
@@ -838,4 +922,65 @@ Prevent from just inserting into Course_Offering. (After) */
 
 /* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems. (Siddarth) */
 
-/* Check if sale_start_date < purchase_date in Course_Packages and sale_end_date > purchase_date in Course_Packages. */
+/* Trigger (34) Check if sale_start_date < purchase_date in Course_Packages and sale_end_date > purchase_date in Course_Packages. */
+CREATE OR REPLACE FUNCTION course_package_date_validation_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  _sale_start_date date;
+  _sale_end_date date;
+  _current_date date;
+BEGIN
+  SELECT CURRENT_DATE into _current_date;
+
+  SELECT sale_start_date, sale_end_date
+  FROM Course_Packages
+  WHERE package_id = NEW.package_id
+  INTO _sale_start_date, _sale_end_date;
+
+	IF _current_date > _sale_end_date THEN
+      RAISE EXCEPTION 'This course package sale has already ended!';
+  ELSIF _current_date < _sale_start_date THEN
+      RAISE EXCEPTION 'This course package sale has not started yet!';
+  ELSE 
+      RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER course_package_date_validation
+BEFORE INSERT OR UPDATE ON Buys
+FOR EACH ROW EXECUTE FUNCTION course_package_date_validation_func();
+
+/* Trigger (35) Changes to Redeems will be reflected in Buys. */
+CREATE OR REPLACE FUNCTION redeems_updates_buys_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  num_records_with_same_cust_id_in_buys integer;
+  num_records_with_not_enough_redemptions integer;
+BEGIN
+	SELECT COUNT(*) into num_records_with_same_cust_id_in_buys
+  FROM Buys 
+  WHERE cust_id = NEW.cust_id;
+
+  SELECT COUNT(*) into num_records_with_not_enough_redemptions
+  FROM Buys 
+  WHERE cust_id = NEW.cust_id
+  AND num_remaining_redemptions > 0;
+
+  IF num_records_with_same_cust_id_in_buys <= 0 THEN
+    RAISE EXCEPTION 'This customer does not own any course packages!';
+  ELSIF num_records_with_not_enough_redemptions <= 0 THEN
+    RAISE EXCEPTION 'This customer has not enough redemptions left in his package.';
+  ELSE 
+    UPDATE Buys
+    SET num_remaining_redemptions = num_remaining_redemptions - 1
+    WHERE cust_id = NEW.cust_id;
+
+  	RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER redeems_updates_buys
+BEFORE INSERT OR UPDATE ON Redeems
+FOR EACH ROW EXECUTE FUNCTION redeems_updates_buys_func();
