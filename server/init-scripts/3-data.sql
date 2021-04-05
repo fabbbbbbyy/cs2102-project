@@ -20,6 +20,8 @@ insert into Course_Packages(course_package_name, num_free_registrations, price, 
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 8', 8, 55.0, '2021-03-24', '2021-06-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 9', 9, 25.0, '2021-03-24', '2021-07-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 10', 10, 35.0, '2021-03-24', '2021-08-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 11', 11, 35.0, '2021-04-24', '2021-08-24');
+insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 12', 12, 35.0, '2021-03-24', '2021-03-29');
 
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Boulevard', null, 'emily@gmail.com', '2005-05-17', 'Emily', '67892345');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jungle Swamp', null, 'brian@live.com', '2013-08-09', 'Brian', '88112233');
@@ -64,6 +66,7 @@ insert into Employees(address, depart_date, email, join_date, employee_name, pho
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Yew Tee', null, 'popo@yahoo.com', '2020-04-04', 'Popo', '99229922');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jurong East', null, 'pipi@yahoo.com', '2020-07-22', 'Pipi', '99559955');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jurong West', null, 'wawa@yahoo.com', '2020-12-22', 'Wawa', '99559988');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jurong Long', null, 'wawa233@yahoo.com', '2020-12-22', 'Wawa', '99559988');
 
 insert into Part_Time_Employees(eid, hourly_rate) values(1, 9);
 insert into Part_Time_Employees(eid, hourly_rate) values(2, 8);
@@ -75,6 +78,7 @@ insert into Part_Time_Employees(eid, hourly_rate) values(7, 9);
 insert into Part_Time_Employees(eid, hourly_rate) values(8, 11);
 insert into Part_Time_Employees(eid, hourly_rate) values(9, 9);
 insert into Part_Time_Employees(eid, hourly_rate) values(10, 8);
+insert into Part_Time_Employees(eid, hourly_rate) values(41, 8);
 
 insert into Full_Time_Employees(eid, monthly_salary) values(11, 1800);
 insert into Full_Time_Employees(eid, monthly_salary) values(12, 2400);
@@ -161,6 +165,7 @@ insert into Instructors(instructor_id, course_area_name) values(8, 'Database Sys
 insert into Instructors(instructor_id, course_area_name) values(9, 'Calculus');
 insert into Instructors(instructor_id, course_area_name) values(9, 'Operating Systems');
 insert into Instructors(instructor_id, course_area_name) values(10, 'Statistics');
+insert into Instructors(instructor_id, course_area_name) values(41, 'Ethics');
 insert into Instructors(instructor_id, course_area_name) values(31, 'Database Systems');
 insert into Instructors(instructor_id, course_area_name) values(32, 'Computer Networks');
 insert into Instructors(instructor_id, course_area_name) values(33, 'Calculus');
@@ -194,6 +199,7 @@ insert into Part_Time_Instructors(instructor_id, course_area_name) values(8, 'Da
 insert into Part_Time_Instructors(instructor_id, course_area_name) values(9, 'Calculus');
 insert into Part_Time_Instructors(instructor_id, course_area_name) values(9, 'Operating Systems');
 insert into Part_Time_Instructors(instructor_id, course_area_name) values(10, 'Statistics');
+insert into Part_Time_Instructors(instructor_id, course_area_name) values(41, 'Ethics');
 
 insert into Full_Time_Instructors(instructor_id, course_area_name) values(31, 'Database Systems');
 insert into Full_Time_Instructors(instructor_id, course_area_name) values(32, 'Computer Networks');
@@ -441,7 +447,8 @@ insert into Buys values(8, 7, '2021-04-02', 0);
 insert into Buys values(9, 3, '2021-04-02', 5);
 insert into Buys values(10, 4, '2021-04-02', 5);
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 3, '2021-06-01', 10, 8, 3, '2021-04-02');
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 2, '2021-06-01', 10, 8, 3, '2021-04-02');
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-03-01', 1, '2021-02-01', 2, 8, 7, '2021-04-02');
+/* This doesn't work because the trigger prevents you from redeeming when you have no more sessions in Buys! */
+-- insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 3, '2021-06-01', 10, 8, 3, '2021-04-02');
+-- insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 2, '2021-06-01', 10, 8, 3, '2021-04-02');
+-- insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-05-01', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
+-- insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-03-01', 1, '2021-02-01', 2, 8, 7, '2021-04-02');
