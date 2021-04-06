@@ -758,41 +758,50 @@ FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
 
 /* Trigger (18) If sid in cancels is in redeems --> redeem_amt is null and package_credit > 0
 If sid is cancels in in buys --> redeem_amt is > 0 and package_credit is null (Kevin) */
-/*
+
+/* (CORRECT) */
+/* num_remaining_redemptions not null because any transaction in Buys has already occurred */
+
 CREATE OR REPLACE FUNCTION cancels_updates_related_tables_func()
 RETURNS TRIGGER AS $$
 DECLARE
-    package_credit INTEGER;
-    refund_amt NUMERIC;
-    session_date DATE;
+    is_late_cancellation BOOLEAN;
+    _package_id INTEGER;
 BEGIN
     IF (NEW.package_credit IS NOT NULL AND NEW.refund_amt IS NOT NULL) OR (NEW.package_credit IS NULL AND NEW.refund_amt IS NULL) THEN
-        RAISE EXCEPTION 'Package credit and refund amount cannot both be null in the Cancels table';
+        RAISE EXCEPTION 'Only one of package credit and refund amount must be null in the Cancels table';
     END IF;
 
+    SELECT (NEW.cancel_date - session_date) < 7 INTO is_late_cancellation
+    FROM Course_Offering_Sessions
+    WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
+
+    /* Delete from Redeems */
+    /* Change package amount to 0 if < 7 days before, otherwise update Buys if >= 7 days before */
     IF NEW.package_credit IS NOT NULL THEN
-    END IF;
+        /* Can use (sid, launch_date, course_id) (i.e. primary key of Course_Offering_Sessions) to delete from Redeems since
+           a customer can only register for one course at a time */
+        SELECT package_id INTO _package_id
+        FROM Redeems
+        WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
 
-    package_credit := COALESCE(NEW.package_credit, 0.0);
-    refund_amt := COALESCE(NEW.refund_amt, 0);
+        DELETE
+        FROM Redeems
+        WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id AND package_id = _package_id;
+        
+        IF is_late_cancellation = TRUE THEN
+            NEW.package_credit := 0;
+        END IF;
 
-    IF 
-
-    IF NEW.package_credit IS NULL THEN
-    ELSE
-    END IF;
-    SELECT package_id, purchase_date, session_date INTO pack_id, purch_date, session_date
-    FROM Buys NATURAL JOIN Redeems NATURAL JOIN Course_Offering_Sessions
-    WHERE cust_id = NEW.cust_id AND sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
-
-    SELECT num_remaining_redemptions INTO old_credits
-    FROM Buys
-    WHERE cust_id = NEW.cust_id AND package_id = pack_id AND purchase_date = purch_date;
-
-    IF NEW.package_credit > 0 AND sess_date - NEW.cancel_date >= 7 THEN
         UPDATE Buys
-        SET num_remaining_redemptions = old_credits + 1
-        WHERE cust_id = NEW.cust_id AND package_id = pack_id AND purchase_date = purch_date;
+        SET num_remaining_redemptions = num_remaining_redemptions + NEW.package_credit
+        WHERE package_id = _package_id AND cust_id = NEW.cust_id;
+    END IF;
+
+    /* Delete from Registers */
+    /* Change refund amount if < 7 days before */
+    IF NEW.refund_amt IS NOT NULL AND is_late_cancellation = TRUE THEN
+        NEW.refund_amt := 0.0;
     END IF;
 
     RETURN NEW;
@@ -802,7 +811,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER cancels_updates_related_tables
 BEFORE INSERT ON Cancels
 FOR EACH ROW EXECUTE FUNCTION cancels_updates_related_tables_func();
-*/
 
 /* Trigger (20) Every course_offering_session needs to exist in conducts relation (Siddarth)*/
 CREATE OR REPLACE FUNCTION check_all_course_offering_session_is_being_conducted()
