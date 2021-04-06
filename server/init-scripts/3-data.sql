@@ -247,7 +247,7 @@ insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(9, '2021-08-01', 19, '2021-09-01', '2021-10-01', 450, '2021-08-15', 0, 70);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(10, '2021-06-01', 20, '2021-07-01', '2021-08-01', 450, '2021-06-15', 0, 70);
 
-insert into Rooms(seating_capacity, location) values(10, 'Kevin Main House');
+insert into Rooms(seating_capacity, location) values(9, 'Kevin Main House');
 insert into Rooms(seating_capacity, location) values(20, 'Kevin Bedroom');
 insert into Rooms(seating_capacity, location) values(30, 'Kevin Living Room');
 insert into Rooms(seating_capacity, location) values(40, 'Kevin Toilet');
@@ -262,8 +262,8 @@ insert into Rooms(seating_capacity, location) values(25, 'Kevin Mansion');
 BEGIN TRANSACTION;
 SET CONSTRAINTS check_all_course_offering_session_is_being_conducted_trigger DEFERRED;
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 1, '2021-02-02', 9, 10);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 1, '2021-02-10', 14, 15);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 1, '2021-02-25', 16, 17);
+-- insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 1, '2021-02-10', 14, 15);
+-- insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 1, '2021-02-25', 16, 17);
 
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 2, '2021-03-04', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-02-01', 2, '2021-03-15', 14, 16);
@@ -342,8 +342,8 @@ insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, 
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 10, '2021-08-02', 16, 18);
 
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 1, 'Database Systems', '2021-01-01', 1);
-insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 2, 'Database Systems', '2021-01-01', 1);
-insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 3, 'Database Systems', '2021-01-01', 1);
+-- insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 2, 'Database Systems', '2021-01-01', 1);
+-- insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 3, 'Database Systems', '2021-01-01', 1);
 
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(2, 1, 1, 'Computer Networks', '2021-02-01', 2);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(2, 1, 2, 'Computer Networks', '2021-02-01', 2);
