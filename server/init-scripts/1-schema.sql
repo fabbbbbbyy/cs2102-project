@@ -1115,6 +1115,33 @@ Prevent from just inserting into Course_Offering. (After) (Kevin) */
 
 /* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems.
     (Trigger on insertion or update of Cancels table) (Gerren) */
+CREATE OR REPLACE FUNCTION cancel_session_exists_validation_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  is_valid_registration_identifier BOOLEAN;
+  is_valid_redemption_identifier BOOLEAN;
+BEGIN
+  SELECT COUNT(*) = 1 INTO is_valid_registration_identifier
+  FROM Registers
+  WHERE cust_id = NEW.cust_id AND course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid;
+  
+  SELECT COUNT(*) > 0 INTO is_valid_redemption_identifier
+  FROM Redeems
+  WHERE cust_id = NEW.cust_id AND course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid;
+
+  IF is_valid_registration_identifier = FALSE AND is_valid_redemption_identifier = FALSE THEN
+  	RAISE EXCEPTION 'Session has not been redeemed or registered by customer.';
+  ELSE 
+    RETURN NEW;
+  END IF;
+  
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER cancel_session_exists_validation
+BEFORE INSERT OR UPDATE ON Cancels
+FOR EACH ROW EXECUTE FUNCTION cancel_session_exists_validation_func();
+
 
 /* Trigger (34) Check if sale_start_date < purchase_date in Course_Packages and sale_end_date > purchase_date in Course_Packages. (Fabian)*/
 CREATE OR REPLACE FUNCTION course_package_date_validation_func() 
