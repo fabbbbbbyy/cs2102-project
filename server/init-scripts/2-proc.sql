@@ -356,6 +356,51 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (9) get_available_rooms */
+CREATE OR REPLACE FUNCTION get_available_rooms(start_date date, end_date date)
+RETURNS TABLE(rid integer, room_capacity integer, day date, available_hours integer[]) AS $$
+DECLARE
+	cursG CURSOR FOR (SELECT distinct Conducts.rid, Rooms.seating_capacity, Course_Offering_Sessions.session_date
+                   FROM Conducts natural join Rooms natural join Course_Offering_Sessions
+                   WHERE Course_Offering_Sessions.session_date >= start_date
+                   AND Course_Offering_Sessions.session_date <= end_date
+                   GROUP BY Conducts.rid, Course_Offering_Sessions.session_date, Rooms.seating_capacity
+                   ORDER BY Conducts.rid, Course_Offering_Sessions.session_date);
+  rG RECORD;
+  cursF CURSOR FOR (SELECT Conducts.rid, Rooms.seating_capacity, Course_Offering_Sessions.session_date, 
+                      Course_Offering_Sessions.start_time_hour, Course_Offering_Sessions.end_time_hour
+                   FROM Conducts natural join Rooms natural join Course_Offering_Sessions
+                   WHERE Course_Offering_Sessions.session_date >= start_date
+                   AND Course_Offering_Sessions.session_date <= end_date);
+  rF RECORD;
+BEGIN
+	OPEN cursG;
+  LOOP
+  	FETCH cursG INTO rG;
+    EXIT WHEN NOT FOUND;
+    rid := rG.rid;
+    room_capacity := rG.seating_capacity;
+    day := rG.session_date;
+    available_hours := '{9, 10, 11, 14, 15, 16, 17}';
+
+    OPEN cursF;
+    LOOP
+      FETCH cursF INTO rF;
+      EXIT WHEN NOT FOUND;
+
+      IF rF.rid = rG.rid AND rF.session_date = rG.session_date THEN
+        FOR i IN rF.start_time_hour..rF.end_time_hour
+        LOOP
+          available_hours := array_remove(available_hours, i);
+        END LOOP;
+      END IF;
+    END LOOP;
+    CLOSE cursF;
+
+    RETURN NEXT;
+  END LOOP;
+  CLOSE cursG;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (10) add_course_offering (Siddarth) */
 
