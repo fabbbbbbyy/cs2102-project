@@ -77,7 +77,7 @@ create table Employee_Pay_Slips (
     amount numeric not null check(amount > 0), 
     eid integer,
     num_work_days integer check(num_work_days > 0),
-    num_work_hours integer check(num_work_hours > 0),
+    num_work_hours integer check(num_work_hours > 0 and num_work_hours <= 30),
     payment_date date,
     primary key(payment_date, eid),
     foreign key(eid) references Employees
@@ -1049,38 +1049,128 @@ BEFORE INSERT OR UPDATE ON Redeems
 FOR EACH ROW EXECUTE FUNCTION check_redemption_date_before_session_date();
 
 /* Trigger (29) Check if this Employee eventually becomes either Part_Time or Full_Time by the end of the 
-block because it must be either. Deferrable initially deferred. (Fabian) */
+block because it must be either. Deferrable initially deferred. (Siddarth) */
+CREATE OR REPLACE FUNCTION check_employee_either_part_time_or_full_time_employee()
+RETURNS TRIGGER AS $$
+DECLARE
+    is_part_time_employee BOOLEAN;
+    is_full_time_employee BOOLEAN;
+BEGIN
+    SELECT count(distinct eid) > 0 INTO is_part_time_employee
+    FROM Part_Time_Employees
+    WHERE eid = NEW.eid;
+
+    SELECT COUNT(distinct eid) > 0 INTO is_full_time_employee
+    FROM Full_Time_Employees
+    WHERE eid = NEW.eid;
+
+    IF is_part_time_employee or is_full_time_employee THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'Employee must either be part time or full time employee';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_employee_either_part_time_or_full_time_employee
+AFTER INSERT OR UPDATE ON Employees
+DEFERRABLE INITIAlLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION check_employee_either_part_time_or_full_time_employee();
 
 /* Trigger (30) If eid is Part_Time_Employee, num_work_days must be null and num_work_hours non null (Fabian) */
+CREATE OR REPLACE FUNCTION check_pay_slip_corresponds_to_part_time_emp()
+RETURNS TRIGGER AS $$
+DECLARE
+    is_full_time_emp BOOLEAN;
+    is_part_time_emp BOOLEAN;
+BEGIN
+    SELECT count(*) > 0 INTO is_full_time_emp
+    FROM Full_Time_Employees
+    WHERE NEW.eid = eid;
 
-/* Trigger (31) If eid if Full_Time_Employee, num_work_days non null and num_work_hours must be null (Fabian) */
+    SELECT count(*) > 0 INTO is_part_time_emp
+    FROM Part_Time_Employees
+    WHERE NEW.eid = eid;
+
+    IF is_full_time_emp THEN
+        IF NEW.num_work_days IS NULL THEN
+            RAISE EXCEPTION 'Pay slip for full time employee does not contain number of work days for the month.';
+        ELSIF NEW.num_work_hours IS NOT NULL THEN
+            RAISE EXCEPTION 'Pay slip for full time employee should not contain number of work hours for the month.';
+        ELSE
+            RETURN NEW;
+        END IF;
+    END IF;
+
+    IF is_part_time_emp THEN
+        IF NEW.num_work_hours IS NULL THEN
+            RAISE EXCEPTION 'Pay slip for part time employee does not contain number of work hours for the month.';
+        ELSIF NEW.num_work_days IS NOT NULL THEN
+            RAISE EXCEPTION 'Pay slip for part time employees should not contain number of work days for the month.';
+        ELSE
+            RETURN NEW;
+        END IF;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_pay_slip_corresponds_to_part_time_emp
+BEFORE INSERT OR UPDATE ON Employee_Pay_Slips
+FOR EACH ROW EXECUTE FUNCTION check_pay_slip_corresponds_to_part_time_emp();
 
 /* Trigger (32) Check if Course_Offerings has at least 1 Course_Offering_Sessions. Deferrable initially deferred. 
 Prevent from just inserting into Course_Offering. (After) (Kevin) */
 
 /* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems.
     (Trigger on insertion or update of Cancels table) (Gerren) */
+CREATE OR REPLACE FUNCTION cancel_session_exists_validation_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  is_valid_registration_identifier BOOLEAN;
+  is_valid_redemption_identifier BOOLEAN;
+BEGIN
+  SELECT COUNT(*) = 1 INTO is_valid_registration_identifier
+  FROM Registers
+  WHERE cust_id = NEW.cust_id AND course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid;
+  
+  SELECT COUNT(*) > 0 INTO is_valid_redemption_identifier
+  FROM Redeems
+  WHERE cust_id = NEW.cust_id AND course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid;
+
+  IF is_valid_registration_identifier = FALSE AND is_valid_redemption_identifier = FALSE THEN
+  	RAISE EXCEPTION 'Session has not been redeemed or registered by customer.';
+  ELSE 
+    RETURN NEW;
+  END IF;
+  
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER cancel_session_exists_validation
+BEFORE INSERT OR UPDATE ON Cancels
+FOR EACH ROW EXECUTE FUNCTION cancel_session_exists_validation_func();
+
 
 /* Trigger (34) Check if sale_start_date < purchase_date in Course_Packages and sale_end_date > purchase_date in Course_Packages. (Fabian)*/
 CREATE OR REPLACE FUNCTION course_package_date_validation_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-  _sale_start_date date;
-  _sale_end_date date;
-  _current_date date;
+    _sale_start_date date;
+    _sale_end_date date;
+    _current_date date;
 BEGIN
-  SELECT CURRENT_DATE into _current_date;
+    SELECT CURRENT_DATE into _current_date;
 
-  SELECT sale_start_date, sale_end_date
-  FROM Course_Packages
-  WHERE package_id = NEW.package_id
-  INTO _sale_start_date, _sale_end_date;
+    SELECT sale_start_date, sale_end_date
+    FROM Course_Packages
+    WHERE package_id = NEW.package_id
+    INTO _sale_start_date, _sale_end_date;
 
 	IF _current_date > _sale_end_date THEN
       RAISE EXCEPTION 'This course package sale has already ended!';
-  ELSIF _current_date < _sale_start_date THEN
+    ELSIF _current_date < _sale_start_date THEN
       RAISE EXCEPTION 'This course package sale has not started yet!';
-  ELSE 
+    ELSE 
       RETURN NEW;
   END IF;
 END;
