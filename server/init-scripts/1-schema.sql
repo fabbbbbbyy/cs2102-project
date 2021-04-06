@@ -918,6 +918,11 @@ CREATE OR REPLACE FUNCTION check_if_course_offering_session_already_redeemed()
 RETURNS TRIGGER AS $$
 DECLARE
     is_session_redeemed_already BOOLEAN;
+    is_conflicting_with_another_registered_session BOOLEAN;
+    is_conflicting_wtih_another_redeemed_session BOOLEAN;
+    course_session_date DATE;
+    course_session_duration INTEGER;
+    course_session_start_hour INTEGER;
 BEGIN
     SELECT COUNT(*) > 0 INTO is_session_redeemed_already
     FROM Redeems
@@ -926,8 +931,32 @@ BEGIN
     and launch_date = NEW.launch_date
     and course_id = NEW.course_id;
 
+    SELECT session_date, start_time_hour, duration INTO course_session_date, course_session_start_hour, course_session_duration
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+    WHERE sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    /* Check if there are any redeemed session with the same session date and time range as the new/updated register tuple */
+    SELECT COUNT(*) > 0 INTO is_conflicting_wtih_another_redeemed_session
+    FROM Redeems NATURAL JOIN Course_Offering_Sessions
+    WHERE cust_id = NEW.cust_id
+    and session_date = course_session_date
+    and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
+    /* Check if there are any registered session with the same session date and time range as the new/update register tuple */
+    SELECT COUNT(*) > 0 INTO is_conflicting_with_another_registered_session
+    FROM Registers NATURAL JOIN Course_Offering_Sessions
+    WHERE cust_id = NEW.cust_id
+    and session_date = course_session_date
+    and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
     IF is_session_redeemed_already THEN
         RAISE EXCEPTION 'Course offering session is already redeemed.';
+    ELSIF is_conflicting_with_another_registered_session THEN
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registerd course offering session';
+    ELSIF is_conflicting_wtih_another_redeemed_session THEN
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another redeemed course offering sessions';
     ELSE
         RETURN NEW;
     END IF;
@@ -944,6 +973,11 @@ CREATE OR REPLACE FUNCTION check_if_course_offering_session_already_registered()
 RETURNS TRIGGER AS $$
 DECLARE
     is_session_registered_already BOOLEAN;
+    is_conflicting_with_another_registered_session BOOLEAN;
+    is_conflicting_wtih_another_redeemed_session BOOLEAN;
+    course_session_date DATE;
+    course_session_duration INTEGER;
+    course_session_start_hour INTEGER;
 BEGIN
     SELECT COUNT(*) > 0 INTO is_session_registered_already
     FROM Registers
@@ -952,8 +986,32 @@ BEGIN
     and launch_date = NEW.launch_date
     and course_id = NEW.course_id;
 
+    SELECT session_date, start_time_hour, duration INTO course_session_date, course_session_start_hour, course_session_duration
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+    WHERE sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    /* Check if there are any redeemed session with the same session date and time range as the new/updated register tuple */
+    SELECT COUNT(*) > 0 INTO is_conflicting_wtih_another_redeemed_session
+    FROM Redeems NATURAL JOIN Course_Offering_Sessions
+    WHERE cust_id = NEW.cust_id
+    and session_date = course_session_date
+    and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
+    /* Check if there are any registered session with the same session date and time range as the new/update register tuple */
+    SELECT COUNT(*) > 0 INTO is_conflicting_with_another_registered_session
+    FROM Registers NATURAL JOIN Course_Offering_Sessions
+    WHERE cust_id = NEW.cust_id
+    and session_date = course_session_date
+    and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
     IF is_session_registered_already THEN
         RAISE EXCEPTION 'Course offering session is already registered.';
+    ELSIF is_conflicting_with_another_registered_session THEN
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registerd course offering session';
+    ELSIF is_conflicting_wtih_another_redeemed_session THEN
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another redeemed course offering sessions';
     ELSE
         RETURN NEW;
     END IF;
