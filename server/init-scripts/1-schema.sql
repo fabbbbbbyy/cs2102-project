@@ -309,27 +309,36 @@ CREATE TRIGGER course_offering_timeslot_verification
 BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION course_offering_timeslot_verification_func();
 
-/* Trigger (2) Start date and end date of course offering is determined by the dates of its earliest and latest sessions (Gerren) */
+/* Trigger (2) Start date, end date, and seating capacity of a course offering is determined by its sessions (Gerren, Kevin) */
 CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	earliest_session_date DATE;
+  earliest_session_date DATE;
   latest_session_date DATE;
+  updated_offering_seating_capacity INTEGER; /* Added */
 BEGIN
   IF (TG_OP = 'DELETE') THEN
+    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
+    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+    WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
+
     SELECT MIN(session_date), MAX(session_date) INTO earliest_session_date, latest_session_date
     FROM Course_Offering_Sessions
     WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
     
-  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date
+  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date, seating_capacity = updated_offering_seating_capacity
     WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
     RETURN OLD;
   ELSE
+    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
+    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+
     SELECT MIN(session_date), MAX(session_date) INTO earliest_session_date, latest_session_date
     FROM Course_Offering_Sessions
     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
     
-  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date
+  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date, seating_capacity = updated_offering_seating_capacity
     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
   	RETURN NEW;
   END IF;
@@ -337,33 +346,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER set_course_offering_start_end_date
-AFTER INSERT OR DELETE OR UPDATE ON Course_Offering_sessions
+AFTER INSERT OR DELETE OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 
-/* Trigger (4) The seating capacity of a course offering is equal to the sum of the seating capacities of all its sessions (Kevin) */
-/* Insert case handled by add_session; not possible to insert into sessions directly because of constraint with conducts */
-CREATE OR REPLACE FUNCTION change_course_offering_seating_capacity_on_conducts_change_func()
-RETURNS TRIGGER AS $$
-DECLARE
-    updated_offering_seating_capacity INTEGER;
-BEGIN
-    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
-    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
-    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
-
-    UPDATE Course_Offerings
-    SET seating_capacity = updated_offering_seating_capacity
-    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
-
-  	RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER change_course_offering_seating_capacity_on_conducts_change
-AFTER INSERT OR DELETE OR UPDATE ON Conducts
-FOR EACH ROW EXECUTE FUNCTION change_course_offering_seating_capacity_on_conducts_change_func();
-
-/* Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated */
+/* Trigger (4) Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated (Kevin) */
 CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
 RETURNS TRIGGER AS $$
 DECLARE
