@@ -174,7 +174,7 @@ create table Course_Offerings (
   	/* start_date and end_date can be null when there are no sessions initially */
   	start_date date,
     end_date date,
-    fees numeric not null,
+    fees numeric not null check (fees > 0.0),
     registration_deadline date not null,
     seating_capacity integer not null check(seating_capacity >= 0), /* Could be 0 for new course offering */ 
     target_number_registrations integer not null check(target_number_registrations > 0),
@@ -347,7 +347,6 @@ RETURNS TRIGGER AS $$
 DECLARE
     updated_offering_seating_capacity INTEGER;
 BEGIN
-
     SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
@@ -800,8 +799,14 @@ BEGIN
 
     /* Delete from Registers */
     /* Change refund amount if < 7 days before */
-    IF NEW.refund_amt IS NOT NULL AND is_late_cancellation = TRUE THEN
-        NEW.refund_amt := 0.0;
+    IF NEW.refund_amt IS NOT NULL THEN
+        DELETE
+        FROM Registers
+        WHERE launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
+
+        IF is_late_cancellation = TRUE THEN
+            NEW.refund_amt := 0.0;
+        END IF;
     END IF;
 
     RETURN NEW;
