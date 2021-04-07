@@ -23,6 +23,8 @@ insert into Course_Packages(course_package_name, num_free_registrations, price, 
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 11', 11, 35.0, '2021-04-24', '2021-08-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 12', 12, 35.0, '2021-03-24', '2021-03-29');
 
+BEGIN TRANSACTION;
+SET CONSTRAINTS ensure_employee_either_part_time_or_full_time_employee DEFERRED;
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Boulevard', null, 'emily@gmail.com', '2005-05-17', 'Emily', '67892345');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jungle Swamp', null, 'brian@live.com', '2013-08-09', 'Brian', '88112233');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Hill', null, 'mabel@gmail.com', '2014-12-25', 'Mabel', '65689231');
@@ -110,6 +112,7 @@ insert into Full_Time_Employees(eid, monthly_salary) values(37, 1800);
 insert into Full_Time_Employees(eid, monthly_salary) values(38, 2400);
 insert into Full_Time_Employees(eid, monthly_salary) values(39, 3000);
 insert into Full_Time_Employees(eid, monthly_salary) values(40, 1900);
+COMMIT;
 
 insert into Administrators(eid) values(11);
 insert into Administrators(eid) values(12);
@@ -419,10 +422,6 @@ insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, cou
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 3, 'Calculus', '2021-06-01', 10);
 COMMIT;
 
-insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(1, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
-insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(2, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
-insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(8, '2021-05-02', 1, '2021-02-01', 2, NULL, 0.0);
-
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(1, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(2, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(3, '2021-01-02', 1, '2021-01-01', 1);
@@ -434,6 +433,10 @@ insert into Registers(cust_id, register_date, sid, launch_date, course_id) value
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-06-02', 1, '2021-06-01', 7);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-02-10', 2, '2021-02-01', 2);
+
+insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(1, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
+insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(2, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
+insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(8, '2021-05-02', 1, '2021-02-01', 2, NULL, 0.0);
 
 insert into Buys values(1, 1, '2021-04-02', 5);
 insert into Buys values(2, 1, '2021-04-02', 5);
