@@ -280,6 +280,7 @@ create table Redeems (
         on delete cascade,
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
         on delete cascade,
+    unique(cust_id, launch_date, course_id),
 
     CONSTRAINT redemption_date_before_launch_date check(redemption_date >= launch_date)
 );
