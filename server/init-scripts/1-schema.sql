@@ -799,8 +799,14 @@ BEGIN
 
     /* Delete from Registers */
     /* Change refund amount if < 7 days before */
-    IF NEW.refund_amt IS NOT NULL AND is_late_cancellation = TRUE THEN
-        NEW.refund_amt := 0.0;
+    IF NEW.refund_amt IS NOT NULL THEN
+        DELETE
+        FROM Registers
+        WHERE launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
+
+        IF is_late_cancellation = TRUE THEN
+            NEW.refund_amt := 0.0;
+        END IF;
     END IF;
 
     RETURN NEW;
