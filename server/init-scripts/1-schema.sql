@@ -1296,6 +1296,7 @@ CREATE OR REPLACE FUNCTION consecutive_session_numbering_func()
 RETURNS TRIGGER AS $$
 DECLARE
     max_sid INTEGER;
+    next_session_number INTEGER;
 BEGIN
     SELECT sid INTO max_sid
     FROM Course_Offering_Sessions S
@@ -1303,8 +1304,14 @@ BEGIN
     ORDER BY sid DESC
     LIMIT 1;
 
-    IF NEW.sid <> max_sid + 1 THEN
-  	    RAISE EXCEPTION 'Incorrect session number (next session number is %)', max_sid + 1;
+    IF max_sid IS NULL THEN
+        next_session_number := 1;
+    ELSE
+        next_session_number := max_sid + 1;
+    END IF;
+    
+    IF NEW.sid <> next_session_number THEN
+  	    RAISE EXCEPTION 'Incorrect session number (next session number is %)', next_session_number;
     END IF;
 
     RETURN NEW;
