@@ -226,7 +226,7 @@ insert into Courses(description, title, duration, course_area_name) values('Gaus
 insert into Courses(description, title, duration, course_area_name) values('Utilitarian > Deontology', 'Introduction to Ethics', 1, 'Ethics');
 insert into Courses(description, title, duration, course_area_name) values('dy/dx', 'Introduction to Calculus', 2, 'Calculus');
 
-insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(1, '2021-01-01', 11, '2021-02-01', '2021-03-01', 300, '2021-01-15', 0, 50);
+insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(1, '2021-01-01', 11, '2021-02-01', '2021-04-01', 300, '2021-01-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(2, '2021-02-01', 12, '2021-03-01', '2021-04-01', 450, '2021-02-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(3, '2021-03-01', 13, '2021-04-01', '2021-05-03', 300, '2021-03-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(4, '2021-01-01', 14, '2021-02-01', '2021-03-01', 300, '2021-01-15', 0, 50);
@@ -263,7 +263,7 @@ BEGIN TRANSACTION;
 SET CONSTRAINTS check_all_course_offering_session_is_being_conducted_trigger DEFERRED;
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 1, '2021-02-02', 9, 10);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 1, '2021-02-10', 14, 15);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 1, '2021-02-25', 16, 17);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 1, '2021-03-15', 14, 15);
 
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 2, '2021-03-04', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-02-01', 2, '2021-03-15', 14, 16);
@@ -339,7 +339,7 @@ insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, 
 
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-06-01', 10, '2021-07-01', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-06-01', 10, '2021-07-15', 14, 16);
-insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 10, '2021-08-02', 16, 18);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-06-01', 10, '2021-09-01', 16, 18);
 
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 1, 'Database Systems', '2021-01-01', 1);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 2, 'Database Systems', '2021-01-01', 1);
@@ -450,7 +450,6 @@ insert into Buys values(8, 7, '2021-04-02', 5);
 insert into Buys values(9, 3, '2021-04-02', 5);
 insert into Buys values(10, 4, '2021-04-02', 5);
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 3, '2021-06-01', 10, 8, 7, '2021-04-02');
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-06-01', 10, 8, 7, '2021-04-02');
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-03-01', 1, '2021-02-01', 2, 8, 7, '2021-04-02');
