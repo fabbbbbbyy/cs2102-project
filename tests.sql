@@ -40,6 +40,8 @@ CALL add_customer('Mallory', 'Haw Par Villa', 88885555, 'mallory@gmail.com', '65
 CALL add_customer('Alice', 'Buona Vista', 88889999, 'alice@gmail.com', '5500000000000005','2021-10-10', '898');
 CALL add_customer('Bob', 'Holland Village', 88888888, 'bob@gmail.com', '5500000000000006','2021-11-10', '988');
 
+/* Set 3: Verify that the function throws an exception for non-existent dates (non-leap year) (Passing) */
+SELECT get_available_rooms('2022-02-29', '2022-02-29');
 
 /* Function (4) update_credit_card (Kevin) */
 
@@ -192,7 +194,42 @@ SELECT get_available_rooms('2021-06-02', '2021-06-01');
 /* Set 3: Verify that the function throws an exception for non-existent dates (leap year) (Passing) */
 SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');
 
-/* Function (10) add_course_offering (Siddarth) */
+/* Function (10) add_course_offering (Fabian) */
+
+CREATE TYPE session_info AS (session_date date, session_start_hour integer, room_id integer);
+
+/* Set 1: Verify that the function works in the normal case (Failing) */
+CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info]);
+CALL add_course_offering(2, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info, row('2022-02-19', 96, 1)::session_info]); /* Says that i does not exist in all_session_info[i] */
+CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info,
+        row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info]); /* Multiple instructors and rooms should insert correctly */
+
+/* Set 2: Verify that the function throws an exception if the registration deadline is after the launch date (Passing) */
+CALL add_course_offering(1, '2021-06-10', 50.0, '2021-06-15', 11, ARRAY['("2021-06-20", 9, 1)'::session_info]);
+
+/* Set 3: Verify that the function throws an exception if any session is on a weekend (Passing) */
+CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY['("2022-02-19", 9, 1)'::session_info]);
+CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY['("2022-02-20", 9, 1)'::session_info]);
+
+/* Set 4: Verify that the function throws an exception if the session information is empty (Passing (violates target no. registrations > 0 check)) */
+CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, '{}');
+
+/* Set 5: Verify that the function throws an exception if the course ID and launch date already uniquely identify a course offering (Passing) */
+CALL add_course_offering(1, '2021-01-01', 50.0, '2021-12-11', 11, ARRAY['("2022-02-18", 9, 1)'::session_info]);
+
+/* Set 6: Verify that the function throws an exception if the fees have invalid values (Passing) */
+CALL add_course_offering(1, '2021-12-12', 0.0, '2021-12-11', 11, ARRAY['("2022-02-18", 9, 1)'::session_info]);
+CALL add_course_offering(1, '2021-12-12', -1.0, '2021-12-11', 11, ARRAY['("2022-02-18", 9, 1)'::session_info]);
+
+/* Set 7: Verify that the function throws an exception if the launch date is before the current date (Passing) */
+CALL add_course_offering(1, '2021-01-15', 50.0, '2021-01-10', 11, ARRAY['("2021-02-02", 9, 1)'::session_info]);
+
+/* Set 8: Verify that the function throws an exception if the launch date comes before any of the sessions (Passing) */
+CALL add_course_offering(1, '2021-06-15', 50.0, '2021-06-10', 11, ARRAY['("2021-06-13", 9, 1)'::session_info]);
+
+/* Set 9: Verify that the function throws an exception if there are no instructors left to teach a particular session (Failing) */
+CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info,
+        row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info]);
 
 /* Function (11) add_course_package* (Gerren) */
 
