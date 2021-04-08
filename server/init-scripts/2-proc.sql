@@ -1536,6 +1536,6 @@ With
 	SELECT eid, employee_name, num_of_course_areas_managed, num_of_course_offerings_managed, coalesce(sum(total_net_sales), 0) as total_net_registration_sales, M2.top_course_offering_title
 	FROM Manager_Course_Offering_Details_Including_Top_Course_Offering M1 NATURAL LEFT OUTER JOIN Manager_Course_Offering_Sales_Info_With_Top_Course_Offerings M2
 	GROUP BY eid, employee_name, M2.top_course_offering_title, num_of_course_offerings_managed, num_of_course_areas_managed 
-	ORDER BY eid;
+	ORDER BY employee_name;
 END;
 $$ LANGUAGE plpgsql;
