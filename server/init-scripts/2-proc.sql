@@ -152,19 +152,19 @@ DECLARE
   num_of_course_area_emp_managing integer;
 BEGIN
   SELECT count(distinct (course_id, launch_date)) INTO num_of_registration_after_depart_date
-  FROM Employees NATURAL JOIN Administrators NATURAL JOIN Course_Offerings
-  WHERE eid = NEW.eid and registration_deadline > NEW.depart_date;
+  FROM Employees E1 NATURAL JOIN (Administrators A1 INNER JOIN Course_Offerings C1 on A1.eid = C1.admin_eid)
+  WHERE E1.eid = NEW.eid and C1.registration_deadline > NEW.depart_date;
   
   SELECT count(distinct c1.course_id) INTO num_of_courses_session_after_depart_date
-  FROM Conducts c1 NATURAL JOIN Course_Offering_Sessions c2
-  WHERE c1.instructor_id = NEW.eid
-  and c1.course_id = c2.course_id
-  and c2.session_date > NEW.depart_date;
+  FROM Conducts C1 NATURAL JOIN Course_Offering_Sessions C2
+  WHERE C1.instructor_id = NEW.eid
+  and C1.course_id = C2.course_id
+  and C2.session_date > NEW.depart_date;
   
-  SELECT count(course_id) INTO num_of_course_area_emp_managing
-  FROM Managers m NATURAL LEFT OUTER JOIN Course_Areas c NATURAL LEFT OUTER JOIN (Courses NATURAL JOIN Course_Offerings)
-  WHERE m.eid = NEW.eid
-  and ((end_date IS NOT NULL and end_date > NEW.depart_date) or end_date IS NULL);
+  /* Find out if the manager is managing a course area */
+  SELECT count(course_area_name) INTO num_of_course_area_emp_managing
+  FROM Managers m NATURAL JOIN Course_Areas c
+  WHERE m.eid = NEW.eid;
   
   IF num_of_registration_after_depart_date > 0 THEN
   	RAISE EXCEPTION 'Employee is an administrator who is handling some course offering where its registration deadline is after employee departure date. Hence employee cannot be removed.';
