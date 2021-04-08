@@ -276,8 +276,21 @@ DECLARE
   r RECORD;
   current_instructor_area TEXT;
   range_of_hours INTEGER[] := '{9, 10, 11, 14, 15, 16, 17}';
+  is_valid_course BOOLEAN;
   is_instructor_busy BOOLEAN;
 BEGIN
+  SELECT COUNT(course_id) = 1 INTO is_valid_course
+  FROM Courses
+  WHERE course_id = course_identifier;
+
+  IF is_valid_course = FALSE THEN
+    RAISE EXCEPTION 'Invalid course identifier provided.';
+  END IF;
+
+  IF end_date < start_date THEN
+    RAISE EXCEPTION 'Invalid date range provided.';
+  END IF;
+
 	OPEN curs;
   
   LOOP
@@ -290,25 +303,26 @@ BEGIN
 
     LOOP
       EXIT WHEN day > end_date;
-			total_teaching_hours := (
+      total_teaching_hours := (
         SELECT COALESCE(SUM(end_time_hour - start_time_hour), 0)
         FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Course_Offering_Sessions
         WHERE date_part('month', session_date) = date_part('month', day) AND Conducts.instructor_id = instructor_identifier AND Conducts.course_area_name = current_instructor_area 
       );
-      available_hours := '{}';
-      
-      FOR i IN 1 .. array_upper(range_of_hours, 1)
-      LOOP
-      	SELECT COUNT(course_id) > 0 INTO is_instructor_busy
-        FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Course_Offering_Sessions
-        WHERE session_date = day AND Conducts.instructor_id = instructor_identifier AND Conducts.course_area_name = current_instructor_area 
-        AND range_of_hours[i] >= start_time_hour AND range_of_hours[i] < end_time_hour;
-        IF is_instructor_busy = FALSE THEN 
-        	available_hours := array_append(available_hours, range_of_hours[i]);
-        END IF;    
-      END LOOP;
-      
-      RETURN NEXT;
+      IF extract(isodow from day) in (1, 2, 3, 4, 5) THEN
+        available_hours := '{}';
+        
+        FOR i IN 1 .. array_upper(range_of_hours, 1)
+        LOOP
+          SELECT COUNT(course_id) > 0 INTO is_instructor_busy
+          FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Course_Offering_Sessions
+          WHERE session_date = day AND Conducts.instructor_id = instructor_identifier AND Conducts.course_area_name = current_instructor_area 
+          AND range_of_hours[i] >= start_time_hour AND range_of_hours[i] < end_time_hour;
+          IF is_instructor_busy = FALSE THEN 
+            available_hours := array_append(available_hours, range_of_hours[i]);
+          END IF;    
+        END LOOP;
+        RETURN NEXT;
+      END IF;
       day := day + 1;
     END LOOP;
     
@@ -491,6 +505,8 @@ $$ LANGUAGE plpgsql;
 /* Function (15) get_available_course_offerings (Gerren) */
 CREATE OR REPLACE FUNCTION get_available_course_offerings()
 RETURNS TABLE(course_title TEXT, course_area TEXT, start_date DATE, end_date DATE, reg_deadline DATE, course_fees NUMERIC, remaining_seats INTEGER) AS $$
+BEGIN
+  RETURN QUERY
 	WITH Course_Offerings_Sessions_Conducts_Rooms AS (	
   	SELECT Rooms.seating_capacity AS room_seating_capacity, *
     FROM Conducts NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings
@@ -499,19 +515,30 @@ RETURNS TABLE(course_title TEXT, course_area TEXT, start_date DATE, end_date DAT
    	Course_Offerings_Sessions_Registers AS (
   	SELECT *
     FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL LEFT JOIN Registers
-	)
-	SELECT C.title, C.course_area_name, CO.start_date, CO.end_date, CO.registration_deadline, CO.fees,
-  	(SELECT CAST(SUM(room_seating_capacity) AS INTEGER)
-     FROM Course_Offerings_Sessions_Conducts_Rooms
-     WHERE Course_Offerings_Sessions_Conducts_Rooms.course_id = CO.course_id
-     GROUP BY Course_Offerings_Sessions_Conducts_Rooms.course_id) - 
-    (SELECT CAST(COUNT(cust_id) AS INTEGER)
-     FROM Course_Offerings_Sessions_Registers
-     WHERE Course_Offerings_Sessions_Registers.course_id = CO.course_id
-     GROUP BY Course_Offerings_Sessions_Registers.course_id)
-  FROM Courses AS C INNER JOIN Course_Offerings AS CO ON C.course_id = CO.course_id
-  ORDER BY CO.registration_deadline, C.title;
-$$ LANGUAGE sql;
+	  ),
+    Course_Offerings_Sessions_Redeems AS (
+  	SELECT *
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL LEFT JOIN Redeems
+	  ),
+    Course_Offerings_Available_For_Registration AS (
+      SELECT C.title, C.course_area_name, CO.start_date, CO.end_date, CO.registration_deadline, CO.fees,
+      (SELECT CAST(SUM(room_seating_capacity) AS INTEGER)
+      FROM Course_Offerings_Sessions_Conducts_Rooms
+      WHERE Course_Offerings_Sessions_Conducts_Rooms.course_id = CO.course_id AND Course_Offerings_Sessions_Conducts_Rooms.launch_date = CO.launch_date) - 
+      (SELECT CAST(COUNT(cust_id) AS INTEGER)
+      FROM Course_Offerings_Sessions_Registers
+      WHERE Course_Offerings_Sessions_Registers.course_id = CO.course_id AND Course_Offerings_Sessions_Registers.launch_date = CO.launch_date) -
+      (SELECT CAST(COUNT(cust_id) AS INTEGER)
+      FROM Course_Offerings_Sessions_Redeems
+      WHERE Course_Offerings_Sessions_Redeems.course_id = CO.course_id AND Course_Offerings_Sessions_Redeems.launch_date = CO.launch_date) AS num_remaining_seats
+      FROM Courses AS C INNER JOIN Course_Offerings AS CO ON C.course_id = CO.course_id
+      WHERE CO.registration_deadline >= CURRENT_DATE
+      ORDER BY CO.registration_deadline, C.title
+    )
+    SELECT * FROM Course_Offerings_Available_For_Registration
+    WHERE num_remaining_seats > 0;
+END;
+$$ LANGUAGE plpgsql;
 
 /* Function (16) get_available_course_sessions (Kevin) */
 CREATE OR REPLACE FUNCTION get_available_course_sessions(courseId INTEGER, launchDate DATE)
