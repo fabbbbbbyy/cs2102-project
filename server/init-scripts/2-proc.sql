@@ -805,20 +805,24 @@ BEGIN
 	SELECT CURRENT_DATE INTO current_date;
   
   return query
-  /*{course_id, sid, launch_date, session_date, fees, start_time}*/
-  SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
-  FROM (Registers R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
-  WHERE cust_id = customer_id
-  and registration_deadline > CURRENT_DATE
+  WITH 
+  Customer_Registration_Info AS (
+    /*{course_id, sid, launch_date, session_date, fees, start_time}*/
+      SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
+      FROM (Registers R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
+      WHERE cust_id = customer_id
+      and registration_deadline > CURRENT_DATE
 
-  UNION 
+      UNION 
 
-  SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
-  FROM (Redeems R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
-  WHERE cust_id = customer_id
-  and registration_deadline > CURRENT_DATE
-  ORDER BY session_date asc, session_start_hour asc;
-
+      SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
+      FROM (Redeems R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
+      WHERE cust_id = customer_id
+      and registration_deadline > CURRENT_DATE
+  )
+  SELECT * 
+  FROM Customer_Registration_Info
+  ORDER BY session_date, session_start_hour;
 END;
 $$ LANGUAGE plpgsql;
 
