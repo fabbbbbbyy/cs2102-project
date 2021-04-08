@@ -481,7 +481,7 @@ BEGIN
         IF current_session_info.session_date < registration_deadline THEN
           RAISE EXCEPTION 'The session date is earlier than the registration deadline.';
         END IF;
-        IF current_session_info.session_date < launch_deadline THEN
+        IF current_session_info.session_date < _launch_date THEN
           RAISE EXCEPTION 'The session date is earlier than the launch date.';
         END IF;
     END LOOP;
@@ -1164,7 +1164,7 @@ cursP CURSOR FOR (
             ON Employees.eid = Instructors.instructor_id
             Natural Join 
             (Conducts Natural Join Course_Offering_Sessions)   
-        WHERE EXTRACT(MONTH FROM join_date) = EXTRACT(MONTH FROM current_date)
+        WHERE EXTRACT(MONTH FROM session_date) = EXTRACT(MONTH FROM current_date)
     )
     SELECT DIT.eid, sum(difference) as total_hours_worked
     FROM Differences_In_Time DIT
@@ -1172,6 +1172,7 @@ cursP CURSOR FOR (
 );
 rP RECORD;
 current_date date;
+_depart_date date;
 first_work_day integer;
 last_work_day integer;
 num_days_of_current_month integer;
@@ -1223,24 +1224,26 @@ INTO last_work_day; /* This gets last day of current month. */
         FETCH cursP INTO rP;
         EXIT WHEN NOT FOUND;
 
-        IF (EXTRACT(MONTH FROM rP.depart_date) < EXTRACT(MONTH FROM current_date)) THEN
-            CONTINUE;
-        END IF;
-
         WITH Differences_In_Time AS (
-            SELECT Employees.eid, employee_name, (end_time_hour - start_time_hour) as difference, hourly_rate
+            SELECT Employees.eid, Employees.depart_date as depart_date, employee_name, (end_time_hour - start_time_hour) as difference, hourly_rate
             FROM (Part_Time_Employees Natural Join Employees) 
                 Inner Join 
                 (Part_Time_Instructors Natural Join Instructors) 
                 ON Employees.eid = Instructors.instructor_id
                 Natural Join 
                 (Conducts Natural Join Course_Offering_Sessions)   
-            WHERE EXTRACT(MONTH FROM join_date) = EXTRACT(MONTH FROM current_date)
+            WHERE EXTRACT(MONTH FROM session_date) = EXTRACT(MONTH FROM current_date)
         )
-        SELECT employee_name, hourly_rate
-        FROM Differences_In_Time 
-        WHERE eid = rP.eid
-        INTO _name, _hourly_rate;
+        SELECT DIT.employee_name, DIT.hourly_rate, DIT.depart_date
+        FROM Differences_In_Time DIT
+        WHERE DIT.eid = rP.eid
+        INTO _name, _hourly_rate, _depart_date;
+
+        IF _depart_date IS NOT NULL THEN 
+          IF (EXTRACT(MONTH FROM _depart_date) < EXTRACT(MONTH FROM current_date)) THEN
+              CONTINUE;
+          END IF;
+        END IF;
 
         eid := rP.eid;
         status := 'Part Time';
