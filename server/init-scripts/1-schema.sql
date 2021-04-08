@@ -361,6 +361,8 @@ BEGIN
     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
 
     IF NEW.seating_capacity <> course_offering_seating_capacity THEN
+        RAISE NOTICE '%', NEW.seating_capacity;
+        RAISE NOTICE '%', course_offering_seating_capacity;
         RAISE EXCEPTION 'Course offering seating capacity must be equal to the sum of all of its session seating capacities.';
     END IF;
 
@@ -492,14 +494,21 @@ FOR EACH ROW EXECUTE FUNCTION full_time_employee_verification_func();
 CREATE OR REPLACE FUNCTION manager_employee_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	num_same_eid_records integer;
+	num_same_administrator_eid_records integer;
+  num_same_instructor_eid_records integer;
 BEGIN
-	SELECT COUNT(*) INTO num_same_eid_records
+	SELECT COUNT(*) INTO num_same_administrator_eid_records
   FROM Administrators A
   WHERE A.eid = NEW.eid;
+
+  SELECT COUNT(*) INTO num_same_instructor_eid_records
+  FROM Instructors I
+  WHERE I.instructor_id = NEW.eid;
   
-	IF num_same_eid_records > 0 THEN
+	IF num_same_administrator_eid_records > 0 THEN
   	RAISE EXCEPTION 'This employee is already an administrator, and therefore cannot be a manager.';
+  ELSIF num_same_instructor_eid_records > 0 THEN
+  	RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be a manager.';
   ELSE 
   	RETURN NEW;
   END IF;
@@ -513,14 +522,21 @@ FOR EACH ROW EXECUTE FUNCTION manager_employee_verification_func();
 CREATE OR REPLACE FUNCTION administrator_employee_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	num_same_eid_records integer;
+	num_same_manager_eid_records integer;
+  num_same_instructor_eid_records integer;
 BEGIN
-	SELECT COUNT(*) INTO num_same_eid_records
+	SELECT COUNT(*) INTO num_same_manager_eid_records
   FROM Managers M
   WHERE M.eid = NEW.eid;
+
+  SELECT COUNT(*) INTO num_same_instructor_eid_records
+  FROM Instructors I
+  WHERE I.instructor_id = NEW.eid;
   
-	IF num_same_eid_records > 0 THEN
+	IF num_same_manager_eid_records > 0 THEN
   	RAISE EXCEPTION 'This employee is already a manager, and therefore cannot be an administrator.';
+  ELSIF num_same_instructor_eid_records > 0 THEN
+  	RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be an administrator.';
   ELSE 
   	RETURN NEW;
   END IF;
