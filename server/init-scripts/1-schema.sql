@@ -174,7 +174,7 @@ create table Course_Offerings (
   	/* start_date and end_date can be null when there are no sessions initially */
   	start_date date,
     end_date date,
-    fees numeric not null,
+    fees numeric not null check (fees > 0.0),
     registration_deadline date not null,
     seating_capacity integer not null check(seating_capacity >= 0), /* Could be 0 for new course offering */ 
     target_number_registrations integer not null check(target_number_registrations > 0),
@@ -280,6 +280,7 @@ create table Redeems (
         on delete cascade,
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
         on delete cascade,
+    unique(cust_id, launch_date, course_id),
 
     CONSTRAINT redemption_date_before_launch_date check(redemption_date >= launch_date)
 );
@@ -309,27 +310,36 @@ CREATE TRIGGER course_offering_timeslot_verification
 BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION course_offering_timeslot_verification_func();
 
-/* Trigger (2) Start date and end date of course offering is determined by the dates of its earliest and latest sessions (Gerren) */
+/* Trigger (2) Start date, end date, and seating capacity of a course offering is determined by its sessions (Gerren, Kevin) */
 CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	earliest_session_date DATE;
+  earliest_session_date DATE;
   latest_session_date DATE;
+  updated_offering_seating_capacity INTEGER; /* Added */
 BEGIN
   IF (TG_OP = 'DELETE') THEN
+    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
+    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+    WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
+
     SELECT MIN(session_date), MAX(session_date) INTO earliest_session_date, latest_session_date
     FROM Course_Offering_Sessions
     WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
     
-  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date
+  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date, seating_capacity = updated_offering_seating_capacity
     WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
     RETURN OLD;
   ELSE
+    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
+    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+
     SELECT MIN(session_date), MAX(session_date) INTO earliest_session_date, latest_session_date
     FROM Course_Offering_Sessions
     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
     
-  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date
+  	UPDATE Course_Offerings SET start_date = earliest_session_date, end_date = latest_session_date, seating_capacity = updated_offering_seating_capacity
     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
   	RETURN NEW;
   END IF;
@@ -337,54 +347,32 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER set_course_offering_start_end_date
-AFTER INSERT OR DELETE OR UPDATE ON Course_Offering_sessions
+AFTER INSERT OR DELETE OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
 
-/* Trigger (4) The seating capacity of a course offering is equal to the sum of the seating capacities of all its sessions (Kevin) */
-/* Insert case handled by add_session; not possible to insert into sessions directly because of constraint with conducts */
-CREATE OR REPLACE FUNCTION change_course_offering_seating_capacity_on_conducts_change_func()
+/* Trigger (4) Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated (Kevin) */
+CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
 RETURNS TRIGGER AS $$
 DECLARE
-    updated_offering_seating_capacity INTEGER;
+    course_offering_seating_capacity INTEGER;
 BEGIN
-
-    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
+    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO course_offering_seating_capacity
     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
 
-    UPDATE Course_Offerings
-    SET seating_capacity = updated_offering_seating_capacity
-    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+    IF NEW.seating_capacity <> course_offering_seating_capacity THEN
+        RAISE NOTICE '%', NEW.seating_capacity;
+        RAISE NOTICE '%', course_offering_seating_capacity;
+        RAISE EXCEPTION 'Course offering seating capacity must be equal to the sum of all of its session seating capacities.';
+    END IF;
 
   	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- CREATE TRIGGER change_course_offering_seating_capacity_on_conducts_change
--- AFTER INSERT OR DELETE OR UPDATE ON Conducts
--- FOR EACH ROW EXECUTE FUNCTION change_course_offering_seating_capacity_on_conducts_change_func();
-
--- /* Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated */
--- CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
--- RETURNS TRIGGER AS $$
--- DECLARE
---     course_offering_seating_capacity INTEGER;
--- BEGIN
---     SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO course_offering_seating_capacity
---     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
---     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
-
---     IF NEW.seating_capacity <> course_offering_seating_capacity THEN
---         RAISE EXCEPTION 'Course offering seating capacity must be equal to the sum of all of its session seating capacities.';
---     END IF;
-
---   	RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- CREATE TRIGGER verify_course_offering_seating_capacity
--- BEFORE INSERT OR UPDATE ON Course_Offerings
--- FOR EACH ROW EXECUTE FUNCTION verify_course_offering_seating_capacity_func();
+CREATE TRIGGER verify_course_offering_seating_capacity
+BEFORE INSERT OR UPDATE ON Course_Offerings
+FOR EACH ROW EXECUTE FUNCTION verify_course_offering_seating_capacity_func();
 
 /* Trigger (5) Each customer can have at most one active or partially active package (Fabian) */
 CREATE OR REPLACE FUNCTION customer_one_package_verification_func() 
@@ -772,41 +760,56 @@ FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
 
 /* Trigger (18) If sid in cancels is in redeems --> redeem_amt is null and package_credit > 0
 If sid is cancels in in buys --> redeem_amt is > 0 and package_credit is null (Kevin) */
-/*
+
+/* (CORRECT) */
+/* num_remaining_redemptions not null because any transaction in Buys has already occurred */
+
 CREATE OR REPLACE FUNCTION cancels_updates_related_tables_func()
 RETURNS TRIGGER AS $$
 DECLARE
-    package_credit INTEGER;
-    refund_amt NUMERIC;
-    session_date DATE;
+    is_late_cancellation BOOLEAN;
+    _package_id INTEGER;
 BEGIN
     IF (NEW.package_credit IS NOT NULL AND NEW.refund_amt IS NOT NULL) OR (NEW.package_credit IS NULL AND NEW.refund_amt IS NULL) THEN
-        RAISE EXCEPTION 'Package credit and refund amount cannot both be null in the Cancels table';
+        RAISE EXCEPTION 'Only one of package credit and refund amount must be null in the Cancels table';
     END IF;
 
+    SELECT (NEW.cancel_date - session_date) < 7 INTO is_late_cancellation
+    FROM Course_Offering_Sessions
+    WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
+
+    /* Delete from Redeems */
+    /* Change package amount to 0 if < 7 days before, otherwise update Buys if >= 7 days before */
     IF NEW.package_credit IS NOT NULL THEN
-    END IF;
+        /* Can use (sid, launch_date, course_id) (i.e. primary key of Course_Offering_Sessions) to delete from Redeems since
+           a customer can only register for one course at a time */
+        SELECT package_id INTO _package_id
+        FROM Redeems
+        WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
 
-    package_credit := COALESCE(NEW.package_credit, 0.0);
-    refund_amt := COALESCE(NEW.refund_amt, 0);
+        DELETE
+        FROM Redeems
+        WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id AND package_id = _package_id;
+        
+        IF is_late_cancellation = TRUE THEN
+            NEW.package_credit := 0;
+        END IF;
 
-    IF 
-
-    IF NEW.package_credit IS NULL THEN
-    ELSE
-    END IF;
-    SELECT package_id, purchase_date, session_date INTO pack_id, purch_date, session_date
-    FROM Buys NATURAL JOIN Redeems NATURAL JOIN Course_Offering_Sessions
-    WHERE cust_id = NEW.cust_id AND sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
-
-    SELECT num_remaining_redemptions INTO old_credits
-    FROM Buys
-    WHERE cust_id = NEW.cust_id AND package_id = pack_id AND purchase_date = purch_date;
-
-    IF NEW.package_credit > 0 AND sess_date - NEW.cancel_date >= 7 THEN
         UPDATE Buys
-        SET num_remaining_redemptions = old_credits + 1
-        WHERE cust_id = NEW.cust_id AND package_id = pack_id AND purchase_date = purch_date;
+        SET num_remaining_redemptions = num_remaining_redemptions + NEW.package_credit
+        WHERE package_id = _package_id AND cust_id = NEW.cust_id;
+    END IF;
+
+    /* Delete from Registers */
+    /* Change refund amount if < 7 days before */
+    IF NEW.refund_amt IS NOT NULL THEN
+        DELETE
+        FROM Registers
+        WHERE launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
+
+        IF is_late_cancellation = TRUE THEN
+            NEW.refund_amt := 0.0;
+        END IF;
     END IF;
 
     RETURN NEW;
@@ -816,7 +819,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER cancels_updates_related_tables
 BEFORE INSERT ON Cancels
 FOR EACH ROW EXECUTE FUNCTION cancels_updates_related_tables_func();
-*/
 
 /* Trigger (20) Every course_offering_session needs to exist in conducts relation (Siddarth)*/
 CREATE OR REPLACE FUNCTION check_all_course_offering_session_is_being_conducted()
@@ -878,7 +880,7 @@ FOR EACH ROW EXECUTE FUNCTION credit_card_verification_func();
 CREATE OR REPLACE FUNCTION customer_one_session_from_same_course_offering_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	num_same_course_offering_session_registered integer;
+	num_same_course_offering_session_registered INTEGER;
 BEGIN
 	SELECT COUNT(*) into num_same_course_offering_session_registered 
   FROM Registers R
@@ -886,7 +888,7 @@ BEGIN
   AND R.sid = NEW.sid
   AND R.launch_date = NEW.launch_date
   AND R.course_id = NEW.course_id;
-  
+
   IF (num_same_course_offering_session_registered > 0) THEN
   	RAISE EXCEPTION 'This customer already has a session with the same course offering registered.';
   ELSE 
@@ -932,7 +934,13 @@ CREATE OR REPLACE FUNCTION check_if_course_offering_session_already_redeemed()
 RETURNS TRIGGER AS $$
 DECLARE
     is_session_redeemed_already BOOLEAN;
+    is_conflicting_with_another_registered_session BOOLEAN;
+    is_conflicting_wtih_another_redeemed_session BOOLEAN;
+    course_session_date DATE;
+    course_session_duration INTEGER;
+    course_session_start_hour INTEGER;
 BEGIN
+    /* Check if the new session is already redeemed */
     SELECT COUNT(*) > 0 INTO is_session_redeemed_already
     FROM Redeems
     WHERE cust_id = NEW.cust_id
@@ -940,8 +948,55 @@ BEGIN
     and launch_date = NEW.launch_date
     and course_id = NEW.course_id;
 
+    SELECT session_date, start_time_hour, duration INTO course_session_date, course_session_start_hour, course_session_duration
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+    WHERE sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    /*
+      Check if there are any redeemed session with the same session date and time range as the new/updated register tuple
+      Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most. 
+    */
+    SELECT COUNT(*) > 0 INTO is_conflicting_wtih_another_redeemed_session
+    FROM Redeems NATURAL JOIN Course_Offering_Sessions
+    WHERE cust_id = NEW.cust_id
+    and session_date = course_session_date
+    and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
+    WITH
+    Customer_Registered_Sessions as (
+      SELECT *
+      FROM Registers NATURAL JOIN Course_Offering_Sessions
+      WHERE cust_id = NEW.cust_id
+
+      EXCEPT
+
+      SELECT *
+      FROM Registers NATURAL JOIN Course_Offering_Sessions
+      WHERE cust_id = NEW.cust_id
+      and course_id = NEW.course_id
+      and launch_date = NEW.launch_date
+      and sid = NEW.sid
+    )
+    /* 
+      Check if there are any registered session with the same session date and time range as the new/update register tuple 
+      Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most. 
+    */
+    SELECT COUNT(*) > 0 INTO is_conflicting_with_another_registered_session
+    FROM Customer_Registered_Sessions
+    WHERE cust_id = NEW.cust_id
+    and session_date = course_session_date
+    and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
+    RAISE NOTICE '%', is_conflicting_with_another_registered_session;
+
     IF is_session_redeemed_already THEN
         RAISE EXCEPTION 'Course offering session is already redeemed.';
+    ELSIF is_conflicting_with_another_registered_session THEN
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registerd course offering session';
+    ELSIF is_conflicting_wtih_another_redeemed_session THEN
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another redeemed course offering sessions';
     ELSE
         RETURN NEW;
     END IF;
@@ -958,7 +1013,13 @@ CREATE OR REPLACE FUNCTION check_if_course_offering_session_already_registered()
 RETURNS TRIGGER AS $$
 DECLARE
     is_session_registered_already BOOLEAN;
+    is_conflicting_with_another_registered_session BOOLEAN;
+    is_conflicting_wtih_another_redeemed_session BOOLEAN;
+    course_session_date DATE;
+    course_session_duration INTEGER;
+    course_session_start_hour INTEGER;
 BEGIN
+    /* Check if the new session is already registerd*/
     SELECT COUNT(*) > 0 INTO is_session_registered_already
     FROM Registers
     WHERE cust_id = NEW.cust_id
@@ -966,8 +1027,53 @@ BEGIN
     and launch_date = NEW.launch_date
     and course_id = NEW.course_id;
 
+    SELECT session_date, start_time_hour, duration INTO course_session_date, course_session_start_hour, course_session_duration
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+    WHERE sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    WITH
+    Customer_Redeemed_Sessions as (
+      SELECT *
+      FROM Redeems NATURAL JOIN Course_Offering_Sessions
+      WHERE cust_id = NEW.cust_id
+
+      EXCEPT
+
+      SELECT *
+      FROM Redeems NATURAL JOIN Course_Offering_Sessions
+      WHERE cust_id = NEW.cust_id
+      and course_id = NEW.course_id
+      and launch_date = NEW.launch_date
+      and sid = NEW.sid
+    )
+    /* 
+      Check if there are any redeemed session with the same session date and time range as the new/updated register tuple after insertion/update
+      Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most.
+     */
+    SELECT COUNT(*) > 0 INTO is_conflicting_wtih_another_redeemed_session
+    FROM Customer_Redeemed_Sessions
+    WHERE cust_id = NEW.cust_id
+    and session_date = course_session_date
+    and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
+    /* 
+      Check if there are any registered session with the same session date and time range as the new/update register tuple 
+      Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most. 
+    */
+    SELECT COUNT(*) > 0 INTO is_conflicting_with_another_registered_session
+    FROM Registers NATURAL JOIN Course_Offering_Sessions
+    WHERE cust_id = NEW.cust_id
+    and session_date = course_session_date
+    and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
     IF is_session_registered_already THEN
         RAISE EXCEPTION 'Course offering session is already registered.';
+    ELSIF is_conflicting_with_another_registered_session THEN
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registerd course offering session';
+    ELSIF is_conflicting_wtih_another_redeemed_session THEN
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another redeemed course offering sessions';
     ELSE
         RETURN NEW;
     END IF;
@@ -1129,6 +1235,33 @@ Prevent from just inserting into Course_Offering. (After) (Kevin) */
 
 /* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems.
     (Trigger on insertion or update of Cancels table) (Gerren) */
+CREATE OR REPLACE FUNCTION cancel_session_exists_validation_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  is_valid_registration_identifier BOOLEAN;
+  is_valid_redemption_identifier BOOLEAN;
+BEGIN
+  SELECT COUNT(*) = 1 INTO is_valid_registration_identifier
+  FROM Registers
+  WHERE cust_id = NEW.cust_id AND course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid;
+  
+  SELECT COUNT(*) > 0 INTO is_valid_redemption_identifier
+  FROM Redeems
+  WHERE cust_id = NEW.cust_id AND course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid;
+
+  IF is_valid_registration_identifier = FALSE AND is_valid_redemption_identifier = FALSE THEN
+  	RAISE EXCEPTION 'Session has not been redeemed or registered by customer.';
+  ELSE 
+    RETURN NEW;
+  END IF;
+  
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER cancel_session_exists_validation
+BEFORE INSERT OR UPDATE ON Cancels
+FOR EACH ROW EXECUTE FUNCTION cancel_session_exists_validation_func();
+
 
 /* Trigger (34) Check if sale_start_date < purchase_date in Course_Packages and sale_end_date > purchase_date in Course_Packages. (Fabian)*/
 CREATE OR REPLACE FUNCTION course_package_date_validation_func() 
@@ -1275,6 +1408,7 @@ CREATE OR REPLACE FUNCTION consecutive_session_numbering_func()
 RETURNS TRIGGER AS $$
 DECLARE
     max_sid INTEGER;
+    next_session_number INTEGER;
 BEGIN
     SELECT sid INTO max_sid
     FROM Course_Offering_Sessions S
@@ -1282,8 +1416,14 @@ BEGIN
     ORDER BY sid DESC
     LIMIT 1;
 
-    IF NEW.sid <> max_sid + 1 THEN
-  	    RAISE EXCEPTION 'Incorrect session number (next session number is %)', max_sid + 1;
+    IF max_sid IS NULL THEN
+        next_session_number := 1;
+    ELSE
+        next_session_number := max_sid + 1;
+    END IF;
+    
+    IF NEW.sid <> next_session_number THEN
+  	    RAISE EXCEPTION 'Incorrect session number (next session number is %)', next_session_number;
     END IF;
 
     RETURN NEW;
