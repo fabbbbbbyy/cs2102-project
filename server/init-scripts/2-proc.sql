@@ -390,7 +390,7 @@ DECLARE
   _current_date date;
 BEGIN
   IF end_date > start_date THEN
-    RAISE EXCEPTION 'End date should not be earlier than start date.'
+    RAISE EXCEPTION 'End date should not be earlier than start date.';
   END IF;
   _current_date := start_date;
   LOOP 
