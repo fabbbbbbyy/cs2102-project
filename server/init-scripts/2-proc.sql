@@ -338,6 +338,7 @@ BEGIN
   	RAISE EXCEPTION 'Session must fall between 9am to 12pm or 2pm to 6pm';
   END IF;
 
+  RETURN QUERY
 	WITH Joined AS (
     SELECT *
     FROM Conducts NATURAL JOIN Course_Offering_Sessions)
@@ -425,6 +426,7 @@ DECLARE
     earliest_session_date date;
     latest_session_date date;
     hour integer;
+    _current_sid integer;
 BEGIN
     SELECT COUNT(*) > 0 INTO is_existing_course_offering_id
     FROM Course_Offerings CO
@@ -486,6 +488,15 @@ BEGIN
         INTO temp_capacity;
         _seating_capacity := _seating_capacity + temp_capacity;
     END LOOP;
+
+    _seating_capacity := _seating_capacity / 2;
+
+    INSERT INTO Course_Offerings
+                VALUES (_course_id, _launch_date, administrator_id, earliest_session_date, latest_session_date,
+                course_fees, registration_deadline, 0, _seating_capacity);
+
+    _current_sid := 1;
+
     FOREACH current_session_info IN ARRAY all_session_info
     LOOP
         current_session_date := current_session_info.session_date;
@@ -520,15 +531,13 @@ BEGIN
             LIMIT 1
             INTO current_instructor_id;
             IF current_instructor_id IS NOT NULL THEN
-                INSERT INTO Course_Offerings
-                VALUES (_course_id, _launch_date, administrator_id, earliest_session_date, latest_session_date,
-                course_fees, registration_deadline, _seating_capacity, _seating_capacity);
                 INSERT INTO Course_Offering_Sessions (sid, launch_date, course_id, session_date, start_time_hour, end_time_hour)
-                VALUES (1, _launch_date, _course_id, current_session_date, current_session_start_hour, current_session_end_hour)
+                VALUES (_current_sid, _launch_date, _course_id, current_session_date, current_session_start_hour, current_session_end_hour)
                 RETURNING Course_Offering_Sessions.sid into current_session_id;
                 INSERT INTO Conducts 
                 VALUES (current_session_room_id, current_instructor_id, current_session_id, _course_area_name, _launch_date, 
                 _course_id);
+                _current_sid := _current_sid + 1;
             END IF;
         END IF;
     END LOOP;
