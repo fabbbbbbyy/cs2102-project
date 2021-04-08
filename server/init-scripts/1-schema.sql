@@ -360,31 +360,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER change_course_offering_seating_capacity_on_conducts_change
-AFTER INSERT OR DELETE OR UPDATE ON Conducts
-FOR EACH ROW EXECUTE FUNCTION change_course_offering_seating_capacity_on_conducts_change_func();
+-- CREATE TRIGGER change_course_offering_seating_capacity_on_conducts_change
+-- AFTER INSERT OR DELETE OR UPDATE ON Conducts
+-- FOR EACH ROW EXECUTE FUNCTION change_course_offering_seating_capacity_on_conducts_change_func();
 
-/* Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated */
-CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
-RETURNS TRIGGER AS $$
-DECLARE
-    course_offering_seating_capacity INTEGER;
-BEGIN
-    SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO course_offering_seating_capacity
-    FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
-    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+-- /* Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated */
+-- CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--     course_offering_seating_capacity INTEGER;
+-- BEGIN
+--     SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO course_offering_seating_capacity
+--     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Rooms
+--     WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
 
-    IF NEW.seating_capacity <> course_offering_seating_capacity THEN
-        RAISE EXCEPTION 'Course offering seating capacity must be equal to the sum of all of its session seating capacities.';
-    END IF;
+--     IF NEW.seating_capacity <> course_offering_seating_capacity THEN
+--         RAISE EXCEPTION 'Course offering seating capacity must be equal to the sum of all of its session seating capacities.';
+--     END IF;
 
-  	RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+--   	RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER verify_course_offering_seating_capacity
-BEFORE INSERT OR UPDATE ON Course_Offerings
-FOR EACH ROW EXECUTE FUNCTION verify_course_offering_seating_capacity_func();
+-- CREATE TRIGGER verify_course_offering_seating_capacity
+-- BEFORE INSERT OR UPDATE ON Course_Offerings
+-- FOR EACH ROW EXECUTE FUNCTION verify_course_offering_seating_capacity_func();
 
 /* Trigger (5) Each customer can have at most one active or partially active package (Fabian) */
 CREATE OR REPLACE FUNCTION customer_one_package_verification_func() 
@@ -506,14 +506,21 @@ FOR EACH ROW EXECUTE FUNCTION full_time_employee_verification_func();
 CREATE OR REPLACE FUNCTION manager_employee_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	num_same_eid_records integer;
+	num_same_administrator_eid_records integer;
+  num_same_instructor_eid_records integer;
 BEGIN
-	SELECT COUNT(*) INTO num_same_eid_records
+	SELECT COUNT(*) INTO num_same_administrator_eid_records
   FROM Administrators A
   WHERE A.eid = NEW.eid;
+
+  SELECT COUNT(*) INTO num_same_instructor_eid_records
+  FROM Instructors I
+  WHERE I.instructor_id = NEW.eid;
   
-	IF num_same_eid_records > 0 THEN
+	IF num_same_administrator_eid_records > 0 THEN
   	RAISE EXCEPTION 'This employee is already an administrator, and therefore cannot be a manager.';
+  ELSIF num_same_instructor_eid_records > 0 THEN
+  	RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be a manager.';
   ELSE 
   	RETURN NEW;
   END IF;
@@ -527,14 +534,21 @@ FOR EACH ROW EXECUTE FUNCTION manager_employee_verification_func();
 CREATE OR REPLACE FUNCTION administrator_employee_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	num_same_eid_records integer;
+	num_same_manager_eid_records integer;
+  num_same_instructor_eid_records integer;
 BEGIN
-	SELECT COUNT(*) INTO num_same_eid_records
+	SELECT COUNT(*) INTO num_same_manager_eid_records
   FROM Managers M
   WHERE M.eid = NEW.eid;
+
+  SELECT COUNT(*) INTO num_same_instructor_eid_records
+  FROM Instructors I
+  WHERE I.instructor_id = NEW.eid;
   
-	IF num_same_eid_records > 0 THEN
+	IF num_same_manager_eid_records > 0 THEN
   	RAISE EXCEPTION 'This employee is already a manager, and therefore cannot be an administrator.';
+  ELSIF num_same_instructor_eid_records > 0 THEN
+  	RAISE EXCEPTION 'This employee is already an instructor, and therefore cannot be an administrator.';
   ELSE 
   	RETURN NEW;
   END IF;
