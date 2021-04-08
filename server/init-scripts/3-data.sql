@@ -226,6 +226,8 @@ insert into Courses(description, title, duration, course_area_name) values('Gaus
 insert into Courses(description, title, duration, course_area_name) values('Utilitarian > Deontology', 'Introduction to Ethics', 1, 'Ethics');
 insert into Courses(description, title, duration, course_area_name) values('dy/dx', 'Introduction to Calculus', 2, 'Calculus');
 
+BEGIN TRANSACTION;
+SET CONSTRAINTS check_all_course_offering_session_is_being_conducted_trigger DEFERRED;
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(1, '2021-01-01', 11, '2021-02-01', '2021-04-01', 300, '2021-01-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(2, '2021-02-01', 12, '2021-03-01', '2021-04-01', 450, '2021-02-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(3, '2021-03-01', 13, '2021-04-01', '2021-05-03', 300, '2021-03-15', 0, 50);
@@ -259,8 +261,6 @@ insert into Rooms(seating_capacity, location) values(5, 'Kevin Garden');
 insert into Rooms(seating_capacity, location) values(15, 'Kevin Third House');
 insert into Rooms(seating_capacity, location) values(25, 'Kevin Mansion');
 
-BEGIN TRANSACTION;
-SET CONSTRAINTS check_all_course_offering_session_is_being_conducted_trigger DEFERRED;
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 1, '2021-02-02', 9, 10);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 1, '2021-02-10', 14, 15);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 1, '2021-03-15', 14, 15);

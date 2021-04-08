@@ -338,6 +338,7 @@ BEGIN
   	RAISE EXCEPTION 'Session must fall between 9am to 12pm or 2pm to 6pm';
   END IF;
 
+  RETURN QUERY
 	WITH Joined AS (
     SELECT *
     FROM Conducts NATURAL JOIN Course_Offering_Sessions)
@@ -356,53 +357,193 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (9) get_available_rooms */
+
 CREATE OR REPLACE FUNCTION get_available_rooms(start_date date, end_date date)
 RETURNS TABLE(rid integer, room_capacity integer, day date, available_hours integer[]) AS $$
 DECLARE
-	cursG CURSOR FOR (SELECT distinct Conducts.rid, Rooms.seating_capacity, Course_Offering_Sessions.session_date
-                   FROM Conducts natural join Rooms natural join Course_Offering_Sessions
-                   WHERE Course_Offering_Sessions.session_date >= start_date
-                   AND Course_Offering_Sessions.session_date <= end_date
-                   GROUP BY Conducts.rid, Course_Offering_Sessions.session_date, Rooms.seating_capacity
-                   ORDER BY Conducts.rid, Course_Offering_Sessions.session_date);
-  rG RECORD;
-  cursF CURSOR FOR (SELECT Conducts.rid, Rooms.seating_capacity, Course_Offering_Sessions.session_date, 
-                      Course_Offering_Sessions.start_time_hour, Course_Offering_Sessions.end_time_hour
-                   FROM Conducts natural join Rooms natural join Course_Offering_Sessions
-                   WHERE Course_Offering_Sessions.session_date >= start_date
-                   AND Course_Offering_Sessions.session_date <= end_date);
-  rF RECORD;
+	curs CURSOR FOR (SELECT * FROM Rooms);
+  r record;
+  temprow record;
+  _current_date date;
 BEGIN
-	OPEN cursG;
-  LOOP
-  	FETCH cursG INTO rG;
-    EXIT WHEN NOT FOUND;
-    rid := rG.rid;
-    room_capacity := rG.seating_capacity;
-    day := rG.session_date;
-    available_hours := '{9, 10, 11, 14, 15, 16, 17}';
-
-    OPEN cursF;
+  _current_date := start_date;
+  LOOP 
+    EXIT WHEN _current_date > end_date;
+    OPEN curs;
     LOOP
-      FETCH cursF INTO rF;
+      FETCH curs into r;
       EXIT WHEN NOT FOUND;
-
-      IF rF.rid = rG.rid AND rF.session_date = rG.session_date THEN
-        FOR i IN rF.start_time_hour..rF.end_time_hour
-        LOOP
-          available_hours := array_remove(available_hours, i);
-        END LOOP;
-      END IF;
+      rid := r.rid;
+      SELECT Rooms.seating_capacity
+      FROM Rooms 
+      WHERE Rooms.rid = r.rid
+      INTO room_capacity;
+      day := _current_date;
+      available_hours := '{9, 10, 11, 14, 15, 16, 17}';
+      IF EXISTS (SELECT 1 FROM Course_Offering_Sessions Natural Join Conducts 
+      WHERE Conducts.rid = r.rid AND Course_Offering_Sessions.session_date = _current_date) THEN
+        FOR temprow IN SELECT * FROM Course_Offering_Sessions Natural Join Conducts 
+        WHERE Conducts.rid = r.rid AND Course_Offering_Sessions.session_date = _current_date
+          LOOP
+            FOR i IN temprow.start_time_hour..temprow.end_time_hour
+            LOOP
+              available_hours := array_remove(available_hours, i);
+            END LOOP;
+          END LOOP;
+      END IF; 
+      RETURN NEXT;
     END LOOP;
-    CLOSE cursF;
-
-    RETURN NEXT;
+    CLOSE curs;
+    _current_date := _current_date + interval '1 day';
   END LOOP;
-  CLOSE cursG;
 END;
 $$ LANGUAGE plpgsql;
 
 /* Function (10) add_course_offering (Siddarth) */
+CREATE TYPE session_info AS (session_date date, session_start_hour integer, room_id integer);
+
+CREATE OR REPLACE PROCEDURE add_course_offering(_course_id integer, _launch_date date, course_fees integer, 
+registration_deadline date, administrator_id integer, all_session_info session_info[]) 
+AS $$
+DECLARE
+    current_session_info session_info;
+    current_session_date date;
+    current_session_id integer;
+    current_session_start_hour integer;
+    current_session_end_hour integer;
+    current_session_room_id integer;
+    current_instructor_id integer;
+    course_duration integer;
+    _course_area_name text;
+    _available_hours integer[];
+    _seating_capacity integer;
+    temp_capacity integer;
+    is_existing_course_offering_id boolean;
+    is_valid_admin_id boolean;
+    is_valid_room_id boolean;
+    contains_hour boolean;
+    is_free_room boolean;
+    earliest_session_date date;
+    latest_session_date date;
+    hour integer;
+    _current_sid integer;
+BEGIN
+    SELECT COUNT(*) > 0 INTO is_existing_course_offering_id
+    FROM Course_Offerings CO
+    WHERE CO.course_id = _course_id AND launch_date = _launch_date;
+
+    SELECT COUNT(*) > 0 INTO is_valid_admin_id
+    FROM Administrators A
+    WHERE A.eid = administrator_id;
+
+    IF is_existing_course_offering_id = TRUE THEN
+        RAISE EXCEPTION 'The course ID and launch date already uniquely identify a course offering.';
+    END IF;
+
+    IF is_valid_admin_id = FALSE THEN
+        RAISE EXCEPTION 'The admin with the administrator id does not exist in the database.';
+    END IF;
+
+    IF is_valid_room_id = FALSE THEN
+        RAISE EXCEPTION 'The room with the room id does not exist in the database.';
+    END IF;
+    
+    IF _launch_date < CURRENT_DATE THEN
+        RAISE EXCEPTION 'The launch date cannot be before the current date.';
+    END IF;
+    
+    IF registration_deadline < CURRENT_DATE THEN
+        RAISE EXCEPTION 'The registration deadline cannot be before the current date.';
+    END IF;
+    
+    IF _launch_date < registration_deadline THEN
+        RAISE EXCEPTION 'The launch date cannot be before the registration deadline.';
+    END IF;
+
+    SELECT duration, course_area_name
+    FROM Courses
+    WHERE course_id = _course_id
+    INTO course_duration, _course_area_name;
+
+    earliest_session_date := all_session_info[1].session_date;
+    latest_session_date := all_session_info[1].session_date;
+    FOREACH current_session_info IN ARRAY all_session_info
+    LOOP
+        IF current_session_info.session_date < earliest_session_date THEN
+            earliest_session_date := all_session_info[i].session_date;
+        END IF;
+        IF current_session_info.session_date > latest_session_date THEN
+            latest_session_date := all_session_info[i].session_date;
+        END IF;
+    END LOOP;
+
+    _seating_capacity := 0;
+    FOREACH current_session_info IN ARRAY all_session_info
+    LOOP
+        current_session_date := current_session_info.session_date;
+        current_session_room_id := current_session_info.room_id;
+        SELECT room_capacity
+        FROM get_available_rooms(current_session_date, current_session_date)
+        WHERE rid = current_session_room_id
+        INTO temp_capacity;
+        _seating_capacity := _seating_capacity + temp_capacity;
+    END LOOP;
+
+    _seating_capacity := _seating_capacity / 2;
+
+    INSERT INTO Course_Offerings
+                VALUES (_course_id, _launch_date, administrator_id, earliest_session_date, latest_session_date,
+                course_fees, registration_deadline, 0, _seating_capacity);
+
+    _current_sid := 1;
+
+    FOREACH current_session_info IN ARRAY all_session_info
+    LOOP
+        current_session_date := current_session_info.session_date;
+        current_session_start_hour := current_session_info.session_start_hour;
+        current_session_room_id := current_session_info.room_id;
+        
+        SELECT available_hours
+        FROM get_available_rooms(current_session_date, current_session_date)
+        WHERE rid = current_session_room_id
+        INTO _available_hours;
+
+        current_session_end_hour := current_session_start_hour + course_duration;
+
+        is_free_room := TRUE;
+        FOR i IN current_session_start_hour..current_session_end_hour
+        LOOP 
+            contains_hour := FALSE;
+            FOREACH hour IN ARRAY _available_hours
+            LOOP 
+              IF hour = i THEN
+                contains_hour := TRUE;
+              END IF;
+            END LOOP;
+            IF contains_hour = FALSE THEN
+              is_free_room := FALSE;
+            END IF;
+        END LOOP;
+
+        IF is_free_room = TRUE THEN 
+            SELECT eid
+            FROM find_instructors(_course_id, current_session_date, current_session_start_hour)
+            LIMIT 1
+            INTO current_instructor_id;
+            IF current_instructor_id IS NOT NULL THEN
+                INSERT INTO Course_Offering_Sessions (sid, launch_date, course_id, session_date, start_time_hour, end_time_hour)
+                VALUES (_current_sid, _launch_date, _course_id, current_session_date, current_session_start_hour, current_session_end_hour)
+                RETURNING Course_Offering_Sessions.sid into current_session_id;
+                INSERT INTO Conducts 
+                VALUES (current_session_room_id, current_instructor_id, current_session_id, _course_area_name, _launch_date, 
+                _course_id);
+                _current_sid := _current_sid + 1;
+            END IF;
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
 
 /* Function (11) add_course_package (Gerren) */
 CREATE OR REPLACE PROCEDURE add_course_package(package_name TEXT, num_free_course_sessions INTEGER, price NUMERIC, start_date DATE, end_date DATE)
