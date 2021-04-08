@@ -1278,23 +1278,27 @@ BEGIN
 
     SELECT cust_id, name
     FROM Registers NATURAL JOIN Customers
+  ),
+  Promoted_Courses AS (
+    SELECT C1.cust_id as customer_id, C1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
+    FROM Customers_With_No_Registrations C1, (Course_Offerings NATURAL JOIN Courses) C2
+    WHERE C2.registration_deadline > current_timestamp
+
+    UNION
+
+    SELECT R1.cust_id as customer_id, R1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
+    FROM (Recent_Course_Areas_Registered NATURAL JOIN Customers) R1, (Course_Offerings NATURAL JOIN Courses) C2
+    WHERE C2.registration_deadline > current_timestamp
+    and EXISTS (
+      SELECT 1
+      FROM Recent_Course_Areas_Registered R2
+      WHERE R1.cust_id = R2.cust_id
+      and C2.course_area_name = R2.course_area_name
+    )
   )
-  SELECT C1.cust_id as customer_id, C1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
-  FROM Customers_With_No_Registrations C1, (Course_Offerings NATURAL JOIN Courses) C2
-  WHERE C2.registration_deadline > current_timestamp
-
-  UNION
-
-  SELECT R1.cust_id as customer_id, R1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
-  FROM (Recent_Course_Areas_Registered NATURAL JOIN Customers) R1, (Course_Offerings NATURAL JOIN Courses) C2
-  WHERE C2.registration_deadline > current_timestamp
-  and EXISTS (
-    SELECT 1
-    FROM Recent_Course_Areas_Registered R2
-    WHERE R1.cust_id = R2.cust_id
-    and C2.course_area_name = R2.course_area_name
-  );
-
+  SELECT *
+  FROM Promoted_Courses
+  ORDER BY customer_id, registration_deadline;
 END;
 $$ LANGUAGE plpgsql;
 
