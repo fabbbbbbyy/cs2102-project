@@ -27,6 +27,26 @@ CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2
 
 /* Function (2) remove_employee (Siddarth)*/
 
+/* Set 1: Verify that the function works if the employee is a Administrator that DOES NOT handle ANY course offering where it's registration deadline is after the departure date (Passing) */
+CALL remove_employee(11, '2021-07-01');
+/* Set 2: Verify that the function throws an exception if the employee is a Administrator handling SOME course offering where it's registration deadline is after the departure date (Passing) */
+CALL remove_employee(11, '2021-05-01');
+/* Set 3: Verify that the function works if the employee is a Instructor who DOES NOT teach ANY course session that starts after the departure date (Passing) */
+CALL remove_employee(1, '2021-08-20');
+/* Set 4: Verify that the function throws an exception if the employee is an Instructor who is teaching some course session that starts after the departure date (Passing) */
+CALL remove_employee(1, '2021-10-20');
+/* Set 5: Verify that the function works if the employee is a Manager who is NOT managing ANY course area */
+CALL remove_employee(26, '2021-11-20');
+/* Set 6: Verify that the function throws an exception if the employee is a Manager who is managing some course area */
+CALL remove_employee(21, '2021-11-20');
+/* Set 7: Verify that the function throws an exception if the employee id is invalid (Passing) */
+CALL remove_employee(100, '2021-04-05');
+/* Set 8: Verify that the function throws an exception if the departure date is before the Employee's joining date (Passing) */
+CALL remove_employee(2, '2013-07-05');
+/* Set 9: Verify that the function throws an exception if the employee has departed already (Passing) */
+CALL remove_employee(1, '2021-10-10');
+CALL remove_employee(1, '2021-11-10');
+
 /* Function (3) add_customer (Gerren) */
 
 /* Function (4) update_credit_card (Kevin) */
@@ -85,6 +105,27 @@ CALL add_course('My DB101', 'Introduction to Database Systems', 1, 'Database Sys
 CALL add_course('My DB101', 'My DBMS', 1, 'DBMS');
 
 /* Function (6) find_instructors (Siddarth) */
+
+/* Set 1: Verify that the function works in the normal case (Passing)*/
+SELECT find_instructors(2, '2021-09-01', 16);
+
+/* Set 2: Verify that the function returns no output if the session date is on a weekend */
+SELECT find_instructors(5, '2021-04-25', 10);
+
+/* Set 3: Verify that the function returns no output if the session start hour is in between 12-2 */
+SELECT find_instructors(5, '2021-01-01', 13);
+
+/* Set 4: Verify that the function returns no output if the session start hour is before 9 */
+SELECT find_instructors(5, '2021-01-01', 8);
+
+/* Set 5: Verify that the function returns no output if the session start hour is after 18 */
+SELECT find_instructors(5, '2021-01-01', 19);
+
+/* Set 6: Verify that the function throws an exception if the session start hour is non-positive */
+SELECT find_instructors(5, '2021-01-01', -2);
+
+/* Set 7: Verify that the function throws an exception if the course id is invalid (Passing) */
+SELECT find_instructors(11, '2021-01-01', 9);
 
 /* Function (7) get_available_instructors (Gerren) */
 
@@ -159,7 +200,7 @@ SELECT get_available_rooms('2021-06-02', '2021-06-01');
 /* Set 3: Verify that the function throws an exception for non-existent dates (leap year) (Passing) */
 SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');
 
-/* Function (10) add_course_offering (Siddarth) */
+/* Function (10) add_course_offering (Fabian) */
 
 /* Function (11) add_course_package* (Gerren) */
 
@@ -175,6 +216,11 @@ SELECT get_available_course_packages();
 /* Function (13) buy_course_package (Fabian) */
 
 /* Function (14) get_my_course_package (Siddarth) */
+
+/* Set 1: Verify that the function works in the normal case (Passing) */
+SELECT get_my_course_package(8);
+/* Set 2: Verify that the function throws an exception for invalid customer id (Passing) */
+SELECT get_my_course_package(11);
 
 /* Function (15) get_available_course_offerings (Gerren) */
 
@@ -193,6 +239,12 @@ SELECT get_available_course_sessions(1, '2021-01-01');
 
 /* Function (18) get_my_registrations (Siddarth) */
 
+/* Set 1: Verify that the function works in the normal case (Passing) */
+SELECT get_my_registrations(8);
+
+/* Set 2: Verify that the function throws an exception for invalid customer id (Passing) */
+SELECT get_my_registrations(12);
+
 /* Function (19) update_course_session (Gerren) */
 
 /* Function (20) cancel_registration (Kevin) */
@@ -200,6 +252,17 @@ SELECT get_available_course_sessions(1, '2021-01-01');
 /* Function (21) update_instructor (Fabian) */
 
 /* Function (22) update_room (Siddarth) */
+
+/* Set 1: Verify that the function works in the normal case (Passing) */
+CALL update_room(8, '2021-07-01', 1, 4);
+/* Set 2: Verify that the function throws an exception if the new room id is invalid (Passing) */
+CALL update_room(8, '2021-07-01', 1, 15);
+/* Set 3: Verify that the function throws an exception if the new room's seating capacity is lesser than course session seating capacity (Passing) */
+CALL update_room(10, '2021-06-01', 3, 5);
+/* Set 4: Verify that the function throws an exception if the new room has a concurrent session (Passing) */
+CALL update_room(10, '2021-06-01', 3, 8);
+/* Set 5: Verify that the function throws an exception if the course session is invalid (Passing) */
+CALL update_room(8, '2021-01-01', 1, 1);
 
 /* Function (23) remove_session (Gerren) */
 
@@ -243,6 +306,9 @@ CALL add_session(1, '2021-06-01', 5, '2021-07-09', 9, 1, 1);
 
 /* Function (26) promote_courses (Siddarth) */
 
+/* Set 1: Verify that the function works in the normal case (Passing) */
+SELECT promote_courses();
+
 /* Function (27) top_packages (Gerren) */
 
 /* Function (28) popular_courses (Kevin) */
@@ -251,3 +317,6 @@ CALL add_session(1, '2021-06-01', 5, '2021-07-09', 9, 1, 1);
 /* Function (29) view_summary_report (Fabian) */
 
 /* Function (30) view_manager_report (Siddarth) */
+
+/* Set 1: Verify that the function works in the normal case (Passing) */
+SELECT view_manager_report();
