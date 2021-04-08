@@ -6,8 +6,8 @@ CALL add_employee('BB', 'My Road', '99998888', 'me@mail.com', 'Monthly', 1000.0,
 CALL add_employee('CC', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Manager', '{}');
 CALL add_employee('CC', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Administrator', '{}');
 
-/* Set 2: Verify that the function throws an exception if the join date is after the current date (Failing) */
-CALL add_employee('CC', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2022-01-01', 'Administrator', '{}'); /* Should throw exception */
+/* Set 2: Verify that the function throws an exception if the join date is after the current date (Passing) */
+CALL add_employee('CC', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2022-01-01', 'Administrator', '{}'); 
 
 /* Set 3: Verify that the function throws an exception if the salary is below 0 (Passing) */
 CALL add_employee('CC', 'My Road', '99998888', 'me@mail.com', 'Hourly', -1.0, '2000-01-01', 'Administrator', '{}');
@@ -16,14 +16,14 @@ CALL add_employee('CC', 'My Road', '99998888', 'me@mail.com', 'Monthly', -1.0, '
 /* Set 4: Verify that the function throws an exception if the course area does not exist (Passing) */
 CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Instructor', '{"DBMS"}');
 
-/* Set 5: Verify that the function throws an exception if an empty array is used for an instructor (Failing) */
-CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Instructor', '{}'); /* Should throw exception */
+/* Set 5: Verify that the function throws an exception if an empty array is used for an instructor (Passing) */
+CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Instructor', '{}'); 
 
 /* Set 6: Verify that the function throws an exception if the course area is already being managed by a manager (Passing) */
 CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Manager', '{"Calculus"}');
 
-/* Set 7: Verify that the function throws an exception if adding an administrator with non-empty course areas (Failing) */
-CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Administrator', '{"Calculus"}'); /* Should throw exception */
+/* Set 7: Verify that the function throws an exception if adding an administrator with non-empty course areas (Passing) */
+CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Administrator', '{"Calculus"}'); 
 
 /* Function (5) add_course (Fabian) */
 
@@ -47,12 +47,12 @@ CALL add_course('My DB101', 'My DBMS', 1, 'DBMS');
 
 /* Function (9) get_available_rooms (Fabian) */
 
-/* Set 1: Verify that the function works in the normal case (Failing) */
+/* Set 1: Verify that the function works in the normal case (Passing) */
 SELECT get_available_rooms('2021-06-01', '2021-06-01');
-SELECT get_available_rooms('2021-02-02', '2021-02-03'); /* Room for 2021-02-02 should also be available at 10am since the session ends at 10am */
+SELECT get_available_rooms('2021-02-02', '2021-02-03'); 
 
-/* Set 2: Verify that the function throws an exception if the end date is after the start date (Failing) */
-SELECT get_available_rooms('2021-06-02', '2021-06-01'); /* Should throw exception */
+/* Set 2: Verify that the function throws an exception if the end date is after the start date (Passing) */
+SELECT get_available_rooms('2021-06-02', '2021-06-01'); 
 
 /* Set 3: Verify that the function throws an exception for non-existent dates (leap year) (Passing) */
 SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');

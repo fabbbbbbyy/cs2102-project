@@ -87,7 +87,13 @@ DECLARE
 eid integer;
 course_area text;
 BEGIN
+    IF join_date > current_date THEN
+      RAISE EXCEPTION 'Join date is after the current date.';
+    END IF;
     IF (employee_category = 'Manager') THEN
+        IF course_areas = null OR cardinality(course_areas) = 0 THEN
+            RAISE EXCEPTION 'Course areas must be not be empty for a manager.';
+        END IF;
         SELECT add_employee_helper(home_address, contact_number, email_address, join_date, name) into eid;
         CALL add_fulltime_employee_helper(eid, salary_rate);
         CALL add_manager_helper(eid);
@@ -96,6 +102,9 @@ BEGIN
             CALL add_course_area_helper(eid, course_area);
         END LOOP;
     ELSIF (employee_category = 'Instructor') THEN
+        IF course_areas = null OR cardinality(course_areas) = 0 THEN
+            RAISE EXCEPTION 'Course areas must be not be empty for an instructor.';
+        END IF;
         SELECT add_employee_helper(home_address, contact_number, email_address, join_date, name) into eid;
         IF salary_type = 'Monthly' THEN
             CALL add_fulltime_employee_helper(eid, salary_rate);
@@ -113,7 +122,7 @@ BEGIN
             END LOOP;
         END IF;
     ELSIF (employee_category = 'Administrator') THEN
-        IF (course_areas != null AND cardinality(course_areas) > 0) THEN
+        IF course_areas != null OR cardinality(course_areas) > 0 THEN
             RAISE EXCEPTION 'Course areas must be empty for an administrator.';
         ELSE
             SELECT add_employee_helper(home_address, contact_number, email_address, join_date, name) into eid;
@@ -366,6 +375,9 @@ DECLARE
   temprow record;
   _current_date date;
 BEGIN
+  IF end_date > start_date THEN
+    RAISE EXCEPTION 'End date should not be earlier than start date.'
+  END IF;
   _current_date := start_date;
   LOOP 
     EXIT WHEN _current_date > end_date;
@@ -385,7 +397,7 @@ BEGIN
         FOR temprow IN SELECT * FROM Course_Offering_Sessions Natural Join Conducts 
         WHERE Conducts.rid = r.rid AND Course_Offering_Sessions.session_date = _current_date
           LOOP
-            FOR i IN temprow.start_time_hour..temprow.end_time_hour
+            FOR i IN temprow.start_time_hour..(temprow.end_time_hour - 1)
             LOOP
               available_hours := array_remove(available_hours, i);
             END LOOP;
