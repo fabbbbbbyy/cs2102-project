@@ -315,7 +315,7 @@ BEGIN
       total_teaching_hours := (
         SELECT COALESCE(SUM(end_time_hour - start_time_hour), 0)
         FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Course_Offering_Sessions
-        WHERE date_part('month', session_date) = date_part('month', day) AND Conducts.instructor_id = instructor_identifier AND Conducts.course_area_name = current_instructor_area 
+        WHERE date_part('month', session_date) = date_part('month', day) AND date_part('year', session_date) = date_part('year', day) AND Conducts.instructor_id = instructor_identifier AND Conducts.course_area_name = current_instructor_area 
       );
       IF extract(isodow from day) in (1, 2, 3, 4, 5) THEN
         available_hours := '{}';
@@ -428,7 +428,7 @@ $$ LANGUAGE plpgsql;
 /* Function (10) add_course_offering (Siddarth) */
 CREATE TYPE session_info AS (session_date date, session_start_hour integer, room_id integer);
 
-CREATE OR REPLACE PROCEDURE add_course_offering(_course_id integer, _launch_date date, course_fees integer, 
+CREATE OR REPLACE PROCEDURE add_course_offering(_course_id integer, _launch_date date, course_fees numeric, 
 registration_deadline date, administrator_id integer, all_session_info session_info[]) 
 AS $$
 DECLARE
