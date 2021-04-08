@@ -380,7 +380,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (9) get_available_rooms */
-
 CREATE OR REPLACE FUNCTION get_available_rooms(start_date date, end_date date)
 RETURNS TABLE(rid integer, room_capacity integer, day date, available_hours integer[]) AS $$
 DECLARE
