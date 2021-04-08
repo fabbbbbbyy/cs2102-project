@@ -152,19 +152,19 @@ DECLARE
   num_of_course_area_emp_managing integer;
 BEGIN
   SELECT count(distinct (course_id, launch_date)) INTO num_of_registration_after_depart_date
-  FROM Employees NATURAL JOIN Administrators NATURAL JOIN Course_Offerings
-  WHERE eid = NEW.eid and registration_deadline > NEW.depart_date;
+  FROM Employees E1 NATURAL JOIN (Administrators A1 INNER JOIN Course_Offerings C1 on A1.eid = C1.admin_eid)
+  WHERE E1.eid = NEW.eid and C1.registration_deadline > NEW.depart_date;
   
   SELECT count(distinct c1.course_id) INTO num_of_courses_session_after_depart_date
-  FROM Conducts c1 NATURAL JOIN Course_Offering_Sessions c2
-  WHERE c1.instructor_id = NEW.eid
-  and c1.course_id = c2.course_id
-  and c2.session_date > NEW.depart_date;
+  FROM Conducts C1 NATURAL JOIN Course_Offering_Sessions C2
+  WHERE C1.instructor_id = NEW.eid
+  and C1.course_id = C2.course_id
+  and C2.session_date > NEW.depart_date;
   
-  SELECT count(course_id) INTO num_of_course_area_emp_managing
-  FROM Managers m NATURAL LEFT OUTER JOIN Course_Areas c NATURAL LEFT OUTER JOIN (Courses NATURAL JOIN Course_Offerings)
-  WHERE m.eid = NEW.eid
-  and ((end_date IS NOT NULL and end_date > NEW.depart_date) or end_date IS NULL);
+  /* Find out if the manager is managing a course area */
+  SELECT count(course_area_name) INTO num_of_course_area_emp_managing
+  FROM Managers m NATURAL JOIN Course_Areas c
+  WHERE m.eid = NEW.eid;
   
   IF num_of_registration_after_depart_date > 0 THEN
   	RAISE EXCEPTION 'Employee is an administrator who is handling some course offering where its registration deadline is after employee departure date. Hence employee cannot be removed.';
@@ -805,20 +805,24 @@ BEGIN
 	SELECT CURRENT_DATE INTO current_date;
   
   return query
-  /*{course_id, sid, launch_date, session_date, fees, start_time}*/
-  SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
-  FROM (Registers R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
-  WHERE cust_id = customer_id
-  and registration_deadline > CURRENT_DATE
+  WITH 
+  Customer_Registration_Info AS (
+    /*{course_id, sid, launch_date, session_date, fees, start_time}*/
+      SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
+      FROM (Registers R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
+      WHERE cust_id = customer_id
+      and registration_deadline > CURRENT_DATE
 
-  UNION 
+      UNION 
 
-  SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
-  FROM (Redeems R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
-  WHERE cust_id = customer_id
-  and registration_deadline > CURRENT_DATE
-  ORDER BY session_date asc, session_start_hour asc;
-
+      SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
+      FROM (Redeems R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
+      WHERE cust_id = customer_id
+      and registration_deadline > CURRENT_DATE
+  )
+  SELECT * 
+  FROM Customer_Registration_Info
+  ORDER BY session_date, session_start_hour;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -981,14 +985,30 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE update_room(existing_course_id INTEGER, existing_launch_date DATE, existing_session_id INTEGER, new_room_id INTEGER)
 AS $$
 DECLARE
+  is_not_valid_rid BOOLEAN;
+  is_not_valid_course_offering_session BOOLEAN;
   existing_session_seating_capacity INTEGER;
   new_room_seating_capacity INTEGER;
   current_date DATE;
   course_duration INTEGER;
   course_offering_session_date DATE;
   course_offering_session_start_hour INTEGER;
+  has_course_offering_session_started BOOLEAN;
   num_of_conflicting_sessions INTEGER;
 BEGIN
+  /* Check if new room id is a valid room id */
+  SELECT COUNT(*) = 0 INTO is_not_valid_rid
+  FROM Rooms
+  WHERE rid = new_room_id;
+
+  /* Check if existing course session is a valid course session */
+  SELECT COUNT(*) = 0 INTO is_not_valid_course_offering_session
+  FROM Course_Offering_Sessions
+  WHERE course_id = existing_course_id
+  and launch_date = existing_launch_date
+  and sid = existing_session_id;
+
+  /* Find seating capacity of current room in which the session is being conducted in */
   SELECT seating_capacity INTO existing_session_seating_capacity
   FROM Conducts C1 NATURAL JOIN Course_Offering_Sessions C2 NATURAL JOIN Rooms R1
   WHERE C2.course_id = existing_course_id
@@ -998,22 +1018,20 @@ BEGIN
   /* Find seating capacity of new room */
   SELECT seating_capacity INTO new_room_seating_capacity
   FROM Rooms
-  WHERE rid = existing_session_id;
+  WHERE rid = new_room_id;
 
-  IF new_room_seating_capacity < existing_session_seating_capacity THEN
+  /* If new room seating is less than the seating capacity of the course session then raise exception */
+  IF is_not_valid_rid THEN
+    RAISE EXCEPTION 'New room id is not a valid room id.';
+  ELSIF is_not_valid_course_offering_session THEN
+    RAISE EXCEPTION 'Input course session is not a valid course session.';
+  ELSIF new_room_seating_capacity < existing_session_seating_capacity THEN
   	RAISE EXCEPTION 'New room cannot accomodate to the number of people in course offering session.';
   END IF;
 
-  /* Find course duration */
-  SELECT duration INTO course_duration
+  /* Find course duration, start time hour and session date of current course session */
+  SELECT duration, start_time_hour, session_date, session_date <= CURRENT_DATE INTO course_duration, course_offering_session_start_hour, course_offering_session_date, has_course_offering_session_started
   FROM Conducts NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
-  WHERE course_id = existing_course_id
-  and sid = existing_session_id
-  and launch_date = existing_launch_date;
-
-  /* Find start hour of course_offering_session */
-  SELECT start_time_hour, session_date  INTO course_offering_session_start_hour, course_offering_session_date
-  FROM Conducts NATURAL JOIN Course_Offering_Sessions
   WHERE course_id = existing_course_id
   and sid = existing_session_id
   and launch_date = existing_launch_date;
@@ -1021,12 +1039,14 @@ BEGIN
   /* Find number of conflicting course_offering_sessions in the new rid */
   SELECT count(distinct sid) INTO num_of_conflicting_sessions
   FROM Conducts NATURAL JOIN Course_Offering_Sessions
-  WHERE rid = existing_session_id
+  WHERE rid = new_room_id
   and session_date = course_offering_session_date
   and (int8range(course_offering_session_start_hour, course_offering_session_start_hour + course_duration)
   && int8range(start_time_hour, end_time_hour));
 
-  IF num_of_conflicting_sessions > 0 THEN
+  IF has_course_offering_session_started THEN
+    RAISE EXCEPTION 'Course session has started and unable to update the room for the respective course session'; 
+  ELSIF num_of_conflicting_sessions > 0 THEN
     RAISE EXCEPTION 'There is a session using the room on the same date and duration of the course. Hence new room cannot be assigned.';
   END IF;
 
@@ -1258,23 +1278,27 @@ BEGIN
 
     SELECT cust_id, name
     FROM Registers NATURAL JOIN Customers
+  ),
+  Promoted_Courses AS (
+    SELECT C1.cust_id as customer_id, C1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
+    FROM Customers_With_No_Registrations C1, (Course_Offerings NATURAL JOIN Courses) C2
+    WHERE C2.registration_deadline > current_timestamp
+
+    UNION
+
+    SELECT R1.cust_id as customer_id, R1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
+    FROM (Recent_Course_Areas_Registered NATURAL JOIN Customers) R1, (Course_Offerings NATURAL JOIN Courses) C2
+    WHERE C2.registration_deadline > current_timestamp
+    and EXISTS (
+      SELECT 1
+      FROM Recent_Course_Areas_Registered R2
+      WHERE R1.cust_id = R2.cust_id
+      and C2.course_area_name = R2.course_area_name
+    )
   )
-  SELECT C1.cust_id as customer_id, C1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
-  FROM Customers_With_No_Registrations C1, (Course_Offerings NATURAL JOIN Courses) C2
-  WHERE C2.registration_deadline > current_timestamp
-
-  UNION
-
-  SELECT R1.cust_id as customer_id, R1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
-  FROM (Recent_Course_Areas_Registered NATURAL JOIN Customers) R1, (Course_Offerings NATURAL JOIN Courses) C2
-  WHERE C2.registration_deadline > current_timestamp
-  and EXISTS (
-    SELECT 1
-    FROM Recent_Course_Areas_Registered R2
-    WHERE R1.cust_id = R2.cust_id
-    and C2.course_area_name = R2.course_area_name
-  );
-
+  SELECT *
+  FROM Promoted_Courses
+  ORDER BY customer_id, registration_deadline;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1512,6 +1536,6 @@ With
 	SELECT eid, employee_name, num_of_course_areas_managed, num_of_course_offerings_managed, coalesce(sum(total_net_sales), 0) as total_net_registration_sales, M2.top_course_offering_title
 	FROM Manager_Course_Offering_Details_Including_Top_Course_Offering M1 NATURAL LEFT OUTER JOIN Manager_Course_Offering_Sales_Info_With_Top_Course_Offerings M2
 	GROUP BY eid, employee_name, M2.top_course_offering_title, num_of_course_offerings_managed, num_of_course_areas_managed 
-	ORDER BY eid;
+	ORDER BY employee_name;
 END;
 $$ LANGUAGE plpgsql;
