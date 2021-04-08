@@ -864,7 +864,7 @@ FOR EACH ROW EXECUTE FUNCTION credit_card_verification_func();
 CREATE OR REPLACE FUNCTION customer_one_session_from_same_course_offering_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
-	num_same_course_offering_session_registered integer;
+	num_same_course_offering_session_registered INTEGER;
 BEGIN
 	SELECT COUNT(*) into num_same_course_offering_session_registered 
   FROM Registers R
@@ -872,7 +872,7 @@ BEGIN
   AND R.sid = NEW.sid
   AND R.launch_date = NEW.launch_date
   AND R.course_id = NEW.course_id;
-  
+
   IF (num_same_course_offering_session_registered > 0) THEN
   	RAISE EXCEPTION 'This customer already has a session with the same course offering registered.';
   ELSE 
@@ -924,6 +924,7 @@ DECLARE
     course_session_duration INTEGER;
     course_session_start_hour INTEGER;
 BEGIN
+    /* Check if the new session is already redeemed */
     SELECT COUNT(*) > 0 INTO is_session_redeemed_already
     FROM Redeems
     WHERE cust_id = NEW.cust_id
@@ -937,19 +938,42 @@ BEGIN
     and launch_date = NEW.launch_date
     and course_id = NEW.course_id;
 
-    /* Check if there are any redeemed session with the same session date and time range as the new/updated register tuple */
+    /*
+      Check if there are any redeemed session with the same session date and time range as the new/updated register tuple
+      Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most. 
+    */
     SELECT COUNT(*) > 0 INTO is_conflicting_wtih_another_redeemed_session
     FROM Redeems NATURAL JOIN Course_Offering_Sessions
     WHERE cust_id = NEW.cust_id
     and session_date = course_session_date
     and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
 
-    /* Check if there are any registered session with the same session date and time range as the new/update register tuple */
+    WITH
+    Customer_Registered_Sessions as (
+      SELECT *
+      FROM Registers NATURAL JOIN Course_Offering_Sessions
+      WHERE cust_id = NEW.cust_id
+
+      EXCEPT
+
+      SELECT *
+      FROM Registers NATURAL JOIN Course_Offering_Sessions
+      WHERE cust_id = NEW.cust_id
+      and course_id = NEW.course_id
+      and launch_date = NEW.launch_date
+      and sid = NEW.sid
+    )
+    /* 
+      Check if there are any registered session with the same session date and time range as the new/update register tuple 
+      Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most. 
+    */
     SELECT COUNT(*) > 0 INTO is_conflicting_with_another_registered_session
-    FROM Registers NATURAL JOIN Course_Offering_Sessions
+    FROM Customer_Registered_Sessions
     WHERE cust_id = NEW.cust_id
     and session_date = course_session_date
     and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
+
+    RAISE NOTICE '%', is_conflicting_with_another_registered_session;
 
     IF is_session_redeemed_already THEN
         RAISE EXCEPTION 'Course offering session is already redeemed.';
@@ -979,6 +1003,7 @@ DECLARE
     course_session_duration INTEGER;
     course_session_start_hour INTEGER;
 BEGIN
+    /* Check if the new session is already registerd*/
     SELECT COUNT(*) > 0 INTO is_session_registered_already
     FROM Registers
     WHERE cust_id = NEW.cust_id
@@ -992,14 +1017,35 @@ BEGIN
     and launch_date = NEW.launch_date
     and course_id = NEW.course_id;
 
-    /* Check if there are any redeemed session with the same session date and time range as the new/updated register tuple */
+    WITH
+    Customer_Redeemed_Sessions as (
+      SELECT *
+      FROM Redeems NATURAL JOIN Course_Offering_Sessions
+      WHERE cust_id = NEW.cust_id
+
+      EXCEPT
+
+      SELECT *
+      FROM Redeems NATURAL JOIN Course_Offering_Sessions
+      WHERE cust_id = NEW.cust_id
+      and course_id = NEW.course_id
+      and launch_date = NEW.launch_date
+      and sid = NEW.sid
+    )
+    /* 
+      Check if there are any redeemed session with the same session date and time range as the new/updated register tuple after insertion/update
+      Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most.
+     */
     SELECT COUNT(*) > 0 INTO is_conflicting_wtih_another_redeemed_session
-    FROM Redeems NATURAL JOIN Course_Offering_Sessions
+    FROM Customer_Redeemed_Sessions
     WHERE cust_id = NEW.cust_id
     and session_date = course_session_date
     and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
 
-    /* Check if there are any registered session with the same session date and time range as the new/update register tuple */
+    /* 
+      Check if there are any registered session with the same session date and time range as the new/update register tuple 
+      Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most. 
+    */
     SELECT COUNT(*) > 0 INTO is_conflicting_with_another_registered_session
     FROM Registers NATURAL JOIN Course_Offering_Sessions
     WHERE cust_id = NEW.cust_id
