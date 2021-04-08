@@ -239,11 +239,11 @@ SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');
 
 CREATE TYPE session_info AS (session_date date, session_start_hour integer, room_id integer);
 
-/* Set 1: Verify that the function works in the normal case (Failing) */
+/* Set 1: Verify that the function works in the normal case (Passing) */
 CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info]);
-CALL add_course_offering(2, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info, row('2022-02-19', 96, 1)::session_info]); /* Says that i does not exist in all_session_info[i] */
+CALL add_course_offering(2, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info, row('2022-02-19', 96, 1)::session_info]); 
 CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info,
-        row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info]); /* Multiple instructors and rooms should insert correctly */
+        row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info]); 
 
 /* Set 2: Verify that the function throws an exception if the registration deadline is after the launch date (Passing) */
 CALL add_course_offering(1, '2021-06-10', 50.0, '2021-06-15', 11, ARRAY['("2021-06-20", 9, 1)'::session_info]);
@@ -252,7 +252,7 @@ CALL add_course_offering(1, '2021-06-10', 50.0, '2021-06-15', 11, ARRAY['("2021-
 CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY['("2022-02-19", 9, 1)'::session_info]);
 CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY['("2022-02-20", 9, 1)'::session_info]);
 
-/* Set 4: Verify that the function throws an exception if the session information is empty (Passing (violates target no. registrations > 0 check)) */
+/* Set 4: Verify that the function throws an exception if the session information is empty (Passing (violates target no. registrations > 0 check)) (Passing) */
 CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, '{}');
 
 /* Set 5: Verify that the function throws an exception if the course ID and launch date already uniquely identify a course offering (Passing) */
@@ -268,10 +268,15 @@ CALL add_course_offering(1, '2021-01-15', 50.0, '2021-01-10', 11, ARRAY['("2021-
 /* Set 8: Verify that the function throws an exception if the launch date comes before any of the sessions (Passing) */
 CALL add_course_offering(1, '2021-06-15', 50.0, '2021-06-10', 11, ARRAY['("2021-06-13", 9, 1)'::session_info]);
 
-/* Set 9: Verify that the function throws an exception if there are no instructors left to teach a particular session (Failing) */
+/* Set 9: Verify that the function throws an exception if there are no instructors left to teach a particular session (Failing) CLARIFY WITH AHPINATION!*/
 CALL add_course_offering(1, '2021-12-12', 50.0, '2021-12-11', 11, ARRAY[row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info,
         row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info, row('2022-02-18', 9, 1)::session_info]);
 
+/* Set 10: Verify that the function throws an exception when the launch date is before the registration date (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-27', 11, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+
+/* Set 11: Verify that the function throws an exception when the session date is before the registration date (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-01', 10, 1)  ]::session_info[]);
 
 /* Function (11) add_course_package* (Gerren) */
 
@@ -306,6 +311,25 @@ SELECT get_available_course_packages();
 
 /* Function (13) buy_course_package (Fabian) */
 
+/* Set 1: Verify that the function works in the normal case (Passing) */
+CALL buy_course_package(10, 1);
+
+/* Set 2: Verify that the function throws exception for when customer does not exist and course package exists (Passing) */
+CALL buy_course_package(9999, 1);
+
+/* Set 3: Verify that the function throws exception for when customer exists and course package does not exist (Passing) */
+CALL buy_course_package(10, 9999);
+
+/* Set 4: Verify that the function throws exception for when the course package sale has already ended (Passing) */
+CALL buy_course_package(10, 12);
+
+/* Set 5: Verify that the function throws exception for when the course package sale has not started (Passing) */
+CALL buy_course_package(10, 11);
+
+/* Set 6: Verify that the function throws exception for when the customer already has an active/partially active package (Passing) */
+CALL buy_course_package(10, 1);
+CALL buy_course_package(10, 2);
+
 /* Function (14) get_my_course_package (Siddarth) */
 
 /* Set 1: Verify that the function works in the normal case (Passing) */
@@ -336,6 +360,40 @@ SELECT get_available_course_sessions(10, '2021-06-01');
 SELECT get_available_course_sessions(1, '2021-01-01');
 
 /* Function (17) register_session (Fabian) */
+
+/* Set 1: Register for session with CC normally (Passing) */
+CALL register_session(4, 9, '2021-03-01', 3, 'Credit Card');
+
+/* Set 2: Register for session with CC when customer does not exist (Passing) */
+CALL register_session(2321, 1, '2021-01-01', 1, 'Credit Card');
+
+/* Set 3: Register for session with CC when exists but primary key of Course_Offering_Sessions does not exist (Passing) */
+CALL register_session(4, 1232, '2021-01-01', 1, 'Credit Card');
+
+/* Set 4: Register for session with CC where launch_date is after current_date (Passing) */
+CALL register_session(4, 8, '2021-07-01', 53,'Credit Card');
+
+/* Set 5: Register for session with CC where session_date is before current_date (Passing) */
+CALL register_session(4, 1, '2021-01-01', 1,'Credit Card');
+
+/* Set 6: Register for session with Redemption when customer does not exist (Passing) */
+CALL register_session(2321, 1, '2021-01-01', 1, 'Redemption');
+
+/* Set 7: Register for session with Redemption when primary key of Course_Offering_Sessions does not exist (Passing) */
+CALL register_session(4, 1232, '2021-01-01', 1, 'Redemption');
+
+/* Set 8: Register for session with Redemption where launch_date is after current_date (Passing) */
+CALL register_session(4, 8, '2021-07-01', 1, 'Redemption');
+
+/* Set 9: Register for session with CC where session_date is before current_date (Passing) */
+CALL register_session(4, 1, '2021-01-01', 1, 'Redemption');
+
+/* Set 10: Register for session with Redemption when customer has no course packages in Buys (Passing) */
+CALL register_session(10, 9, '2021-03-01', 3, 'Redemption');
+
+/* Set 11: Register for session with Redemption when customer has no more redemptions in Buys (Passing) */
+CALL register_session(4, 9, '2021-03-01', 3, 'Redemption');
+CALL register_session(4, 6, '2021-03-01', 2, 'Redemption');
 
 /* Function (18) get_my_registrations (Siddarth) */
 
@@ -392,6 +450,18 @@ CALL update_course_session(8, 7, '2021-06-01', 2);
 /* Function (20) cancel_registration (Kevin) */
 
 /* Function (21) update_instructor (Fabian) */
+
+/* Set 1: Verify that the function works in the normal case (Passing) */
+CALL update_instructor(6, '2021-03-01', 2, 2);
+
+/* Set 2: Verify that the function throws exception for session having already been started (Passing) */
+CALL update_instructor(1, '2021-01-01', 1, 5);
+
+/* Set 3: Verify that the function throws exception for when the session does not exist (Passing) */
+CALL update_instructor(1, '2021-02-11', 1, 5);
+
+/* Set 3: Verify that the function throws exception for when the instructor is already teaching other sessions during this timeframe (Passing) */
+CALL update_instructor(6, '2021-03-01', 2, 5);
 
 /* Function (22) update_room (Siddarth) */
 
