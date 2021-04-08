@@ -985,14 +985,30 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE update_room(existing_course_id INTEGER, existing_launch_date DATE, existing_session_id INTEGER, new_room_id INTEGER)
 AS $$
 DECLARE
+  is_not_valid_rid BOOLEAN;
+  is_not_valid_course_offering_session BOOLEAN;
   existing_session_seating_capacity INTEGER;
   new_room_seating_capacity INTEGER;
   current_date DATE;
   course_duration INTEGER;
   course_offering_session_date DATE;
   course_offering_session_start_hour INTEGER;
+  has_course_offering_session_started BOOLEAN;
   num_of_conflicting_sessions INTEGER;
 BEGIN
+  /* Check if new room id is a valid room id */
+  SELECT COUNT(*) = 0 INTO is_not_valid_rid
+  FROM Rooms
+  WHERE rid = new_room_id;
+
+  /* Check if existing course session is a valid course session */
+  SELECT COUNT(*) = 0 INTO is_not_valid_course_offering_session
+  FROM Course_Offering_Sessions
+  WHERE course_id = existing_course_id
+  and launch_date = existing_launch_date
+  and sid = existing_session_id;
+
+  /* Find seating capacity of current room in which the session is being conducted in */
   SELECT seating_capacity INTO existing_session_seating_capacity
   FROM Conducts C1 NATURAL JOIN Course_Offering_Sessions C2 NATURAL JOIN Rooms R1
   WHERE C2.course_id = existing_course_id
@@ -1002,22 +1018,20 @@ BEGIN
   /* Find seating capacity of new room */
   SELECT seating_capacity INTO new_room_seating_capacity
   FROM Rooms
-  WHERE rid = existing_session_id;
+  WHERE rid = new_room_id;
 
-  IF new_room_seating_capacity < existing_session_seating_capacity THEN
+  /* If new room seating is less than the seating capacity of the course session then raise exception */
+  IF is_not_valid_rid THEN
+    RAISE EXCEPTION 'New room id is not a valid room id.';
+  ELSIF is_not_valid_course_offering_session THEN
+    RAISE EXCEPTION 'Input course session is not a valid course session.';
+  ELSIF new_room_seating_capacity < existing_session_seating_capacity THEN
   	RAISE EXCEPTION 'New room cannot accomodate to the number of people in course offering session.';
   END IF;
 
-  /* Find course duration */
-  SELECT duration INTO course_duration
+  /* Find course duration, start time hour and session date of current course session */
+  SELECT duration, start_time_hour, session_date, session_date <= CURRENT_DATE INTO course_duration, course_offering_session_start_hour, course_offering_session_date, has_course_offering_session_started
   FROM Conducts NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
-  WHERE course_id = existing_course_id
-  and sid = existing_session_id
-  and launch_date = existing_launch_date;
-
-  /* Find start hour of course_offering_session */
-  SELECT start_time_hour, session_date  INTO course_offering_session_start_hour, course_offering_session_date
-  FROM Conducts NATURAL JOIN Course_Offering_Sessions
   WHERE course_id = existing_course_id
   and sid = existing_session_id
   and launch_date = existing_launch_date;
@@ -1025,12 +1039,14 @@ BEGIN
   /* Find number of conflicting course_offering_sessions in the new rid */
   SELECT count(distinct sid) INTO num_of_conflicting_sessions
   FROM Conducts NATURAL JOIN Course_Offering_Sessions
-  WHERE rid = existing_session_id
+  WHERE rid = new_room_id
   and session_date = course_offering_session_date
   and (int8range(course_offering_session_start_hour, course_offering_session_start_hour + course_duration)
   && int8range(start_time_hour, end_time_hour));
 
-  IF num_of_conflicting_sessions > 0 THEN
+  IF has_course_offering_session_started THEN
+    RAISE EXCEPTION 'Course session has started and unable to update the room for the respective course session'; 
+  ELSIF num_of_conflicting_sessions > 0 THEN
     RAISE EXCEPTION 'There is a session using the room on the same date and duration of the course. Hence new room cannot be assigned.';
   END IF;
 
