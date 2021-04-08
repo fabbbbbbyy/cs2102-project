@@ -402,7 +402,7 @@ $$ LANGUAGE plpgsql;
 /* Function (10) add_course_offering (Siddarth) */
 CREATE TYPE session_info AS (session_date date, session_start_hour integer, room_id integer);
 
-CREATE OR REPLACE PROCEDURE add_course_offering(_course_id integer, _launch_date date, course_fees integer, 
+CREATE OR REPLACE PROCEDURE add_course_offering(_course_id integer, _launch_date date, course_fees numeric, 
 registration_deadline date, administrator_id integer, all_session_info session_info[]) 
 AS $$
 DECLARE
