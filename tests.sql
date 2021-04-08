@@ -161,6 +161,38 @@ SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');
 
 /* Function (10) add_course_offering (Siddarth) */
 
+/* Set 1: Verify that the function works in the normal case (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-25', 10, 1), ROW('2021-05-26', 10, 1)  ]::session_info[]);
+
+/* Set 2: Verify that the function throws an exception when there is such a course offering already in the database (Passing) */
+CALL add_course_offering(1, '2021-01-01', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+
+/* Set 3: Verify that the function throws an exception when there is no such administrator in the database (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 1, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 999, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+
+/* Set 4: Verify that the function throws an exception when there is no such room in the database (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-25', 10, 50)  ]::session_info[]);
+
+/* Set 5: Verify that the function throws an exception when the launch date is already over (Passing) */
+CALL add_course_offering(1, '2021-03-20', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+
+/* Set 6: Verify that the function throws an exception when the registration date is already over (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-03-05', 11, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+
+/* Set 7: Verify that the function throws an exception when the launch date is before the registration date (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-27', 11, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+
+/* Set 8: Verify that the function throws an exception when the session date is before the registration date (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-01', 10, 1)  ]::session_info[]);
+
+/* Set 9: Verify that the function throws an exception when the launch date is before the registration date (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-01', 10, 1)  ]::session_info[]);
+
+/* Set 10: Verify that the function only adds the course offering and not sessions and conducts when no instructors are free (Passing) */
+CALL add_course_offering(1, '2021-05-20', 5000, '2021-05-05', 11, ARRAY[ ROW('2021-05-25', 10, 1)  ]::session_info[]);
+
 /* Function (11) add_course_package* (Gerren) */
 
 /* Function (12) get_available_course_packages (Kevin) */
@@ -173,6 +205,25 @@ SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');
 SELECT get_available_course_packages();
 
 /* Function (13) buy_course_package (Fabian) */
+
+/* Set 1: Verify that the function works in the normal case (Passing) */
+CALL buy_course_package(1, 1);
+
+/* Set 2: Verify that the function throws exception for when customer does not exist and course package exists (Passing) */
+CALL buy_course_package(9999, 1);
+
+/* Set 3: Verify that the function throws exception for when customer exists and course package does not exist (Passing) */
+CALL buy_course_package(1, 9999);
+
+/* Set 4: Verify that the function throws exception for when the course package sale has already ended (Passing) */
+CALL buy_course_package(1, 12);
+
+/* Set 5: Verify that the function throws exception for when the course package sale has not started (Passing) */
+CALL buy_course_package(1, 11);
+
+/* Set 6: Verify that the function throws exception for when the customer already has an active/partially active package (Passing) */
+CALL buy_course_package(1, 1);
+CALL buy_course_package(1, 2);
 
 /* Function (14) get_my_course_package (Siddarth) */
 

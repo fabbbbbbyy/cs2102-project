@@ -387,6 +387,7 @@ DECLARE
   r record;
   temprow record;
   _current_date date;
+  i integer;
 BEGIN
   IF end_date > start_date THEN
     RAISE EXCEPTION 'End date should not be earlier than start date.';
@@ -469,9 +470,21 @@ BEGIN
         RAISE EXCEPTION 'The admin with the administrator id does not exist in the database.';
     END IF;
 
-    IF is_valid_room_id = FALSE THEN
-        RAISE EXCEPTION 'The room with the room id does not exist in the database.';
-    END IF;
+    FOREACH current_session_info IN ARRAY all_session_info
+    LOOP
+        SELECT COUNT(*) > 0 into is_valid_room_id
+        FROM Rooms 
+        WHERE Rooms.rid = current_session_info.room_id;
+        IF is_valid_room_id = FALSE THEN
+          RAISE EXCEPTION 'The room with the room id does not exist in the database.';
+        END IF;
+        IF current_session_info.session_date < registration_deadline THEN
+          RAISE EXCEPTION 'The session date is earlier than the registration deadline.';
+        END IF;
+        IF current_session_info.session_date < launch_deadline THEN
+          RAISE EXCEPTION 'The session date is earlier than the launch date.';
+        END IF;
+    END LOOP;
     
     IF _launch_date < CURRENT_DATE THEN
         RAISE EXCEPTION 'The launch date cannot be before the current date.';
@@ -495,10 +508,10 @@ BEGIN
     FOREACH current_session_info IN ARRAY all_session_info
     LOOP
         IF current_session_info.session_date < earliest_session_date THEN
-            earliest_session_date := all_session_info[i].session_date;
+            earliest_session_date := current_session_info.session_date;
         END IF;
         IF current_session_info.session_date > latest_session_date THEN
-            latest_session_date := all_session_info[i].session_date;
+            latest_session_date := current_session_info.session_date;
         END IF;
     END LOOP;
 
