@@ -673,10 +673,20 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE update_course_session(cust_identifer INTEGER, course_identifier INTEGER, course_launch_date DATE, session_num INTEGER)
 AS $$
 DECLARE
+  is_valid_customer BOOLEAN;
   is_session_present BOOLEAN;
+  is_redemption BOOLEAN;
+  is_registration BOOLEAN;
 	current_session_count INTEGER;
   input_cust_id INTEGER := cust_identifer;
 BEGIN
+  SELECT COUNT(*) = 1 INTO is_valid_customer
+  FROM Customers
+  WHERE cust_id = cust_identifer;
+  IF is_valid_customer = FALSE THEN
+  	RAISE EXCEPTION 'Invalid customer identifier specified.';
+  END IF;
+
   SELECT COUNT(*) = 1 INTO is_session_present
   FROM Course_Offering_Sessions
   WHERE course_id = course_identifier AND launch_date = course_launch_date AND sid = session_num;
@@ -684,16 +694,25 @@ BEGIN
   	RAISE EXCEPTION 'Session is not present in Course Offering specified.';
   END IF;
     
-	SELECT COUNT(cust_id) INTO current_session_count
-  FROM Registers NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings
+	SELECT COUNT(cust_id) = 1 INTO is_registration
+  FROM Registers NATURAL JOIN Course_Offering_Sessions
   WHERE cust_id = cust_identifer AND course_id = course_identifier AND launch_date = course_launch_date;
-  IF current_session_count <> 1 THEN
+
+  SELECT COUNT(cust_id) = 1 INTO is_redemption
+  FROM Redeems NATURAL JOIN Course_Offering_Sessions
+  WHERE cust_id = cust_identifer AND course_id = course_identifier AND launch_date = course_launch_date;
+
+  IF is_redemption = FALSE AND is_registration = FALSE THEN
   	RAISE EXCEPTION 'Customer has not signed up for specified Course Offering.';
+  ELSIF is_redemption = TRUE AND is_registration = FALSE THEN
+    UPDATE Redeems
+    SET sid = session_num
+    WHERE cust_id = input_cust_id AND course_id = course_identifier AND launch_date = course_launch_date;
+  ELSIF is_redemption = FALSE AND is_registration = TRUE THEN
+    UPDATE Registers
+    SET sid = session_num
+    WHERE cust_id = input_cust_id AND course_id = course_identifier AND launch_date = course_launch_date;
   END IF;
-  
-  UPDATE Registers
-  SET sid = session_num
-  WHERE cust_id = input_cust_id AND course_id = course_identifier AND launch_date = course_launch_date;
 END;
 $$ LANGUAGE plpgsql;
 
