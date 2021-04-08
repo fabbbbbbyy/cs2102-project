@@ -25,37 +25,9 @@ CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2
 /* Set 7: Verify that the function throws an exception if adding an administrator with non-empty course areas (Passing) */
 CALL add_employee('AA', 'My Road', '99998888', 'me@mail.com', 'Hourly', 10.0, '2000-01-01', 'Administrator', '{"Calculus"}'); 
 
-/* Function (5) add_course (Fabian) */
+/* Function (2) remove_employee (Siddarth)*/
 
-/* Set 1: Verify that the function works in the normal case (Passing) */
-CALL add_course('My DB101', 'DB101', 1, 'Database Systems');
-CALL add_course('My DB101', 'DB102', 2, 'Database Systems');
-CALL add_course('My DB101', 'DB103', 3, 'Database Systems');
-CALL add_course('My DB101', 'DB104', 4, 'Database Systems');
-
-/* Set 2: Verify that the function throws an exception if the duration is non within the acceptable range (Passing) */
-CALL add_course('My DB101', 'DB101', 0, 'Database Systems');
-CALL add_course('My DB101', 'DB101', -1, 'Database Systems');
-CALL add_course('My DB101', 'DB101', 5, 'Database Systems');
-CALL add_course('My DB101', 'DB101', 100, 'Database Systems');
-
-/* Set 3: Verify that the function throws an exception if the title already exists (Passing) */
-CALL add_course('My DB101', 'Introduction to Database Systems', 1, 'Database Systems');
-
-/* Set 4: Verify that the function throws an exception if the course area does not exist (Passing) */
-CALL add_course('My DB101', 'My DBMS', 1, 'DBMS');
-
-/* Function (9) get_available_rooms (Fabian) */
-
-/* Set 1: Verify that the function works in the normal case (Passing) */
-SELECT get_available_rooms('2021-06-01', '2021-06-01');
-SELECT get_available_rooms('2021-02-02', '2021-02-03'); 
-
-/* Set 2: Verify that the function throws an exception if the end date is after the start date (Passing) */
-SELECT get_available_rooms('2021-06-02', '2021-06-01'); 
-
-/* Set 3: Verify that the function throws an exception for non-existent dates (leap year) (Passing) */
-SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');
+/* Function (3) add_customer (Gerren) */
 
 /* Function (4) update_credit_card (Kevin) */
 
@@ -91,6 +63,30 @@ CALL update_credit_card(1, '12654', '2030-20-20', '123');
 CALL update_credit_card(1, 'abcd', '2030-12-12', '123');
 CALL update_credit_card(1, '+', '2030-12-12', '123');
 CALL update_credit_card(1, '', '2030-12-12', '123');
+
+/* Function (5) add_course (Fabian) */
+
+/* Set 1: Verify that the function works in the normal case (Passing) */
+CALL add_course('My DB101', 'DB101', 1, 'Database Systems');
+CALL add_course('My DB101', 'DB102', 2, 'Database Systems');
+CALL add_course('My DB101', 'DB103', 3, 'Database Systems');
+CALL add_course('My DB101', 'DB104', 4, 'Database Systems');
+
+/* Set 2: Verify that the function throws an exception if the duration is non within the acceptable range (Passing) */
+CALL add_course('My DB101', 'DB101', 0, 'Database Systems');
+CALL add_course('My DB101', 'DB101', -1, 'Database Systems');
+CALL add_course('My DB101', 'DB101', 5, 'Database Systems');
+CALL add_course('My DB101', 'DB101', 100, 'Database Systems');
+
+/* Set 3: Verify that the function throws an exception if the title already exists (Passing) */
+CALL add_course('My DB101', 'Introduction to Database Systems', 1, 'Database Systems');
+
+/* Set 4: Verify that the function throws an exception if the course area does not exist (Passing) */
+CALL add_course('My DB101', 'My DBMS', 1, 'DBMS');
+
+/* Function (6) find_instructors (Siddarth) */
+
+/* Function (7) get_available_instructors (Gerren) */
 
 /* Function (8) find_rooms (Kevin) */
 
@@ -151,6 +147,22 @@ SELECT find_rooms('2021-04-28', 13, 1);
 SELECT find_rooms('2021-02-29', 9, 1);
 SELECT find_rooms('2030-20-20', 9, 1);
 
+/* Function (9) get_available_rooms (Fabian) */
+
+/* Set 1: Verify that the function works in the normal case (Passing) */
+SELECT get_available_rooms('2021-06-01', '2021-06-01');
+SELECT get_available_rooms('2021-02-02', '2021-02-03'); 
+
+/* Set 2: Verify that the function throws an exception if the end date is after the start date (Passing) */
+SELECT get_available_rooms('2021-06-02', '2021-06-01'); 
+
+/* Set 3: Verify that the function throws an exception for non-existent dates (leap year) (Passing) */
+SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');
+
+/* Function (10) add_course_offering (Siddarth) */
+
+/* Function (11) add_course_package* (Gerren) */
+
 /* Function (12) get_available_course_packages (Kevin) */
 
 /* Set 1: Verify that the function works if the current date is the same as the end date of a course package (insert own data) (Passing) */
@@ -159,6 +171,12 @@ SELECT find_rooms('2030-20-20', 9, 1);
 /* Set 4: Verify that the function excludes course packages which have later start dates than the current date (insert own data) (Passing) */
 /* Set 5: Verify that the function excludes course packages which have earlier end dates than the current date (insert own data) (Passing) */
 SELECT get_available_course_packages();
+
+/* Function (13) buy_course_package (Fabian) */
+
+/* Function (14) get_my_course_package (Siddarth) */
+
+/* Function (15) get_available_course_offerings (Gerren) */
 
 /* Function (16) get_available_course_sessions (Kevin) */
 
@@ -171,7 +189,19 @@ SELECT get_available_course_sessions(10, '2021-06-01');
 /* Set 3: Verify that the function excludes sessions which have dates earlier than the current date (Passing) */
 SELECT get_available_course_sessions(1, '2021-01-01');
 
+/* Function (17) register_session (Fabian) */
+
+/* Function (18) get_my_registrations (Siddarth) */
+
+/* Function (19) update_course_session (Gerren) */
+
 /* Function (20) cancel_registration (Kevin) */
+
+/* Function (21) update_instructor (Fabian) */
+
+/* Function (22) update_room (Siddarth) */
+
+/* Function (23) remove_session (Gerren) */
 
 /* Function (24) add_session (Kevin) */
 
@@ -209,5 +239,15 @@ CALL add_session(1, '2021-01-01', 1, '2021-07-09', 9, 1, 1);
 CALL add_session(1, '2021-06-01', 2, '2021-07-09', 9, 1, 1);
 CALL add_session(1, '2021-06-01', 5, '2021-07-09', 9, 1, 1);
 
+/* Function (25) pay_salary (Fabian) */
+
+/* Function (26) promote_courses (Siddarth) */
+
+/* Function (27) top_packages (Gerren) */
+
 /* Function (28) popular_courses (Kevin) */
     /* Course start date is within this year; has >= 2 offerings; for every pair of offerings, later offering has more people */
+
+/* Function (29) view_summary_report (Fabian) */
+
+/* Function (30) view_manager_report (Siddarth) */
