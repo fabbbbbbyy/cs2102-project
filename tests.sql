@@ -538,6 +538,9 @@ CALL add_session(1, '2021-06-01', 5, '2021-07-09', 9, 1, 1);
 
 /* Function (25) pay_salary (Fabian) */
 
+/* Set 1: Verify that the function works in the normal case (Passing) */
+SELECT pay_salary();
+
 /* Function (26) promote_courses (Siddarth) */
 
 /* Set 1: Verify that the function works in the normal case (Passing) */
@@ -557,6 +560,15 @@ SELECT * FROM top_packages(50);
 /* Course start date is within this year; has >= 2 offerings; for every pair of offerings, later offering has more people */
 
 /* Function (29) view_summary_report (Fabian) */
+
+/* Set 1: Verify that the function works in the normal case (Passing) */
+SELECT view_summary_report(1);
+SELECT view_summary_report(2);
+SELECT view_summary_report(12);
+
+/* Set 2: Verify that the function throws an exception when the user does not pass in months > 1 (Passing) */
+SELECT view_summary_report(0);
+SELECT view_summary_report(-1);
 
 /* Function (30) view_manager_report (Siddarth) */
 
