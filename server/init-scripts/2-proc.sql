@@ -950,23 +950,23 @@ DECLARE
 BEGIN
   SELECT COUNT(*) = 1 INTO is_valid_course_offering_identifier
   FROM Course_Offerings
-  WHERE course_id = course_id AND launch_date = launch_date AND sid = session_number;
+  WHERE course_id = courseId AND launch_date = launchDate;
   
   IF is_valid_course_offering_identifier = FALSE THEN
   	RAISE EXCEPTION 'Invalid course offering identifier.';
   END IF;
 
-  SELECT COUNT(*) = 1 INTO is_valid_registration_identifier
+  SELECT COUNT(*) > 0 INTO is_valid_registration_identifier
   FROM Registers
-  WHERE cust_id = customer_id AND course_id = course_id AND launch_date = launch_date AND sid = session_number;
-  
-  IF is_valid_registration_identifier = FALSE THEN
-  	RAISE EXCEPTION 'Invalid registration details.';
-  END IF;
+  WHERE cust_id = customer_id AND course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
   
   SELECT COUNT(*) > 0 INTO did_redeem
   FROM Redeems
-  WHERE cust_id = customer_id AND course_id = courseId AND launch_date = launchDate AND session_number = sessionNumber;
+  WHERE cust_id = customer_id AND course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
+
+  IF (is_valid_registration_identifier = FALSE) AND (did_redeem = FALSE) THEN
+  	RAISE EXCEPTION 'Invalid registration or redemption details.';
+  END IF;
   
   IF did_redeem = TRUE THEN
   	package_credit := 1;
@@ -974,12 +974,12 @@ BEGIN
   ELSE
   	SELECT fees * 0.9 INTO refund_amt
 	FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
-	WHERE course_id = courseId AND launch_date = launchDate AND session_number = sessionNumber;
+	WHERE course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
 	
 	package_credit := NULL;
   END IF;
 
-  INSERT INTO Cancels(cancel_date, cust_id, launch_date, package_credit, refund_amt, sid, course_id) VALUES(CURRENT_DATE, launch_date, package_credit, refund_amt, session_number, course_id);
+  INSERT INTO Cancels(cancel_date, cust_id, launch_date, package_credit, refund_amt, sid, course_id) VALUES(CURRENT_DATE, customer_id, launchDate, package_credit, refund_amt, sessionNumber, courseId);
 END;
 $$ LANGUAGE plpgsql;
 

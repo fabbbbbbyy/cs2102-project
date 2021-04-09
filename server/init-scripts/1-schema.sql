@@ -774,7 +774,7 @@ BEGIN
         RAISE EXCEPTION 'Only one of package credit and refund amount must be null in the Cancels table';
     END IF;
 
-    SELECT (NEW.cancel_date - session_date) < 7 INTO is_late_cancellation
+    SELECT (session_date - NEW.cancel_date) < 7 INTO is_late_cancellation
     FROM Course_Offering_Sessions
     WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
 
