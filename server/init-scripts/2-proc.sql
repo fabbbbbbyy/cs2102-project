@@ -1461,6 +1461,9 @@ current_date date;
 current_month integer;
 current_year integer;
 BEGIN
+    IF number_of_months <= 0 THEN 
+      RAISE EXCEPTION 'To view a valid summary report, number of months must be > 1.';
+    END IF;
     SELECT CURRENT_DATE into current_date;
     SELECT EXTRACT(MONTH FROM current_date) into current_month;
     SELECT EXTRACT(YEAR FROM current_date) into current_year;
