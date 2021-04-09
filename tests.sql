@@ -344,18 +344,31 @@ SELECT get_my_course_package(11);
 
 /* Function (15) get_available_course_offerings (Gerren) */
 
+/* Useful visualisation queries*/
+SELECT cust_id, session_date, course_id, launch_date, sid, start_time_hour, end_time_hour
+FROM Redeems NATURAL JOIN Course_Offering_Sessions
+UNION
+SELECT cust_id, session_date, course_id, launch_date, sid, start_time_hour, end_time_hour
+FROM Registers NATURAL JOIN Course_Offering_Sessions
+
+WHERE session_date >= CURRENT_DATE
+ORDER BY cust_id, session_date;
+
 /* Set 1: Verify that the function works in the normal case (Passing) */
 SELECT * FROM get_available_course_offerings();
 
 /* Set 2: Verify that the function gives accurate results when number of sessions registered increases (Passing) */
 INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
 
-/* Set 3: Verify that the function gives accurate results when number of sessions registered decreases (Insert own data, Passing) */
+/* Set 3: Verify that the function gives accurate results when number of sessions registered decreases (Passing) */
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
+CALL cancel_registration(8, 1, '2021-06-01', 1);
 
 /* Set 4: Verify that the function gives accurate results when number of sessions redeemed increases (Passing) */
 INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-06-01', 10, 9, 3, '2021-04-02');
 
-/* Set 5: Verify that the function gives accurate results when number of sessions redeemed decreases (Insert own data, Passing) */
+/* Set 5: Verify that the function gives accurate results when number of sessions redeemed decreases (Passing) */
+CALL cancel_registration(8, 10, '2021-06-01', 2);
 
 /* Set 6: Verify that the function gives accurate results when offerings have remaining seats which decreased 0 (Passing) */
 /* Add and edit preprocessing data in data.sql */
@@ -478,7 +491,7 @@ CALL update_course_session(8, 2, '2021-08-01', 2);
 /* Set 8: Verify that exception is thrown if customer did not register for the offering which new session belongs to (Passing) */
 CALL update_course_session(8, 7, '2021-06-01', 2);
 
-/* Set 9: Verify that exception is thrown if new session does not have enough seating capacity to accomodate (Insert own data, Passing) */
+/* Set 9: Verify that exception is thrown if new session does not have enough seating capacity to accomodate (Passing) */
 /* Add and edit preprocessing data in data.sql */
 INSERT INTO Rooms(seating_capacity, location) values(1, 'NUS');
 INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 1, 'Ethics', '2021-08-01', 9);
