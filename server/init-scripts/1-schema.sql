@@ -1674,6 +1674,7 @@ AFTER DELETE ON Full_Time_Instructors
 DEFERRABLE INITIALLY IMMEDIATE
 FOR EACH ROW EXECUTE FUNCTION check_if_full_time_instruc_id_exist_in_full_time_employees();
 
+/* Trigger (45) Prevent deletion of a session that has already been redeemed and attended. */
 CREATE OR REPLACE FUNCTION delete_redeems_func()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -1689,37 +1690,41 @@ BEGIN
     IF _session_date < current_date THEN
       RAISE EXCEPTION 'The redeemed session has already been attended and cannot be deleted from the records.';
     END IF;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE CONSTRAINT TRIGGER delete_redeems_trigger
 AFTER DELETE ON Redeems
 DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION delete_redeems_func;
+FOR EACH ROW EXECUTE FUNCTION delete_redeems_func();
 
+/* Trigger (46) Prevent deletion of a package that has already been used. */
 CREATE OR REPLACE FUNCTION delete_buys_func()
 RETURNS TRIGGER AS $$
 DECLARE
-  has_redeemed boolean;
+  _has_redeemed boolean;
 BEGIN
   SELECT COUNT(*) > 0
   FROM Redeems R
   WHERE R.cust_id = OLD.cust_id
   AND R.package_id = OLD.package_id
   AND R.purchase_date = OLD.purchase_date
-  INTO has_redeemed;
+  INTO _has_redeemed;
 
-  IF has_redeemed = TRUE THEN
+  IF _has_redeemed = TRUE THEN
     RAISE EXCEPTION 'This customer has already redeemed a session with his package, thus we cannot delete this record.';
   END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE CONSTRAINT TRIGGER delete_buys_trigger
 AFTER DELETE ON Buys
 DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION delete_buys_func;
+FOR EACH ROW EXECUTE FUNCTION delete_buys_func();
 
+/* Trigger (47) Prevent deletion of a session that has already been attended. */
 CREATE OR REPLACE FUNCTION delete_registers_func()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -1735,10 +1740,95 @@ BEGIN
   IF _session_date < current_date THEN
     RAISE EXCEPTION 'The registered session has already been attended and cannot be deleted from the records.';
   END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE CONSTRAINT TRIGGER delete_registers_trigger
 AFTER DELETE ON Registers
 DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION delete_registers_func;
+FOR EACH ROW EXECUTE FUNCTION delete_registers_func();
+
+/* Trigger (48) Prevent deletion of a record in cancels. */
+CREATE OR REPLACE FUNCTION delete_cancels_func()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'Rollbacks on Cancel records are disallowed due to the possible misuse of such an operation.';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER delete_cancels_trigger
+AFTER DELETE ON Cancels
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION delete_cancels_func();
+
+/* Trigger (49) Prevent deletion of a session that has already been conducted. */
+CREATE OR REPLACE FUNCTION delete_conducts_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  _session_date date;
+BEGIN
+  SELECT session_date
+  FROM Course_Offering_Sessions C
+  WHERE C.sid = OLD.sid
+  AND C.launch_date = OLD.launch_date
+  AND C.course_id = OLD.course_id
+  INTO _session_date;
+
+  IF _session_date < current_date THEN
+    RAISE EXCEPTION 'The session has already been conducted and cannot be deleted from the records.';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER delete_conducts_trigger
+AFTER DELETE ON Conducts
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION delete_conducts_func();
+
+/* Trigger (50) Prevent deletion of a session that is already over. */
+CREATE OR REPLACE FUNCTION delete_session_func()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.session_date < current_date THEN
+    RAISE EXCEPTION 'The session is already over and cannot be deleted from the records.';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER delete_session_trigger
+AFTER DELETE ON Course_Offering_Sessions
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION delete_session_func();
+
+/* Trigger (51) Prevent deletion of an offering if it's the only offering. */
+CREATE OR REPLACE FUNCTION delete_course_offering_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  _end_date date;
+  _is_only_course_offering boolean;
+BEGIN
+  IF _end_date < current_date THEN
+    RAISE EXCEPTION 'The offering is already over and cannot be deleted from the records.';
+  END IF;
+
+  SELECT COUNT(*) <= 0
+  FROM Course_Offerings C
+  WHERE C.course_id = OLD.course_id
+  AND C.launch_date = OLD.launch_date
+  INTO _is_only_course_offering;
+
+  IF _is_only_course_offering = TRUE THEN
+    RAISE EXCEPTION 'The offering is the only course offering for a particular course and cannot be deleted.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER delete_course_offering_trigger
+AFTER DELETE ON Course_Offerings
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION delete_course_offering_func();
