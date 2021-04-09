@@ -311,7 +311,7 @@ BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION course_offering_timeslot_verification_func();
 
 /* Trigger (2) Start date, end date, and seating capacity of a course offering is determined by its sessions (Gerren, Kevin) */
-CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_func() 
+CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_seating_capacity_func() 
 RETURNS TRIGGER AS $$
 DECLARE
   earliest_session_date DATE;
@@ -346,9 +346,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER set_course_offering_start_end_date
+CREATE TRIGGER set_course_offering_start_end_date_seating_capacity
 AFTER INSERT OR DELETE OR UPDATE ON Conducts
-FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
+FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_seating_capacity_func();
 
 /* Trigger (4) Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated (Kevin) */
 CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
