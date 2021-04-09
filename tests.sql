@@ -449,10 +449,6 @@ CALL update_course_session(8, 7, '2021-06-01', 2);
 
 /* Function (20) cancel_registration (Kevin) */
 
-<<<<<<< HEAD
-/* Set 1: Verify that the function works in the normal case */
-CALL cancel_registration(3, 1, '2021-01-01', 1);
-=======
 /* Set 1: Verify that the function works in the normal case (Failing) */
 CALL cancel_registration(8, 1, '2021-06-01', 1); /* Column sid does not exist. */
 
@@ -464,7 +460,6 @@ CALL cancel_registration(1, 1, '2021-01-01', 1); /* Column sid does not exist. *
 
 /* Set 4: Verify that the function throws an exception when no such Course_Offering exists (Failing) */
 CALL cancel_registration(1, 1, '2022-10-01', 1); /* Column sid does not exist. */
->>>>>>> 2228f0855426b8b4a782df5a4ae669d547f3faaa
 
 /* Function (21) update_instructor (Fabian) */
 
