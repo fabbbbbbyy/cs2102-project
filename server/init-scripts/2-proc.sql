@@ -358,7 +358,7 @@ BEGIN
           SELECT COUNT(course_id) > 0 INTO is_instructor_busy
           FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Course_Offering_Sessions
           WHERE session_date = day AND Conducts.instructor_id = instructor_identifier AND Conducts.course_area_name = current_instructor_area 
-          AND range_of_hours[i] >= start_time_hour AND range_of_hours[i] < end_time_hour;
+          AND range_of_hours[i] >= start_time_hour - 1 AND range_of_hours[i] < end_time_hour + 1;
           IF is_instructor_busy = FALSE THEN 
             available_hours := array_append(available_hours, range_of_hours[i]);
           END IF;    
@@ -951,26 +951,35 @@ DECLARE
   did_redeem BOOLEAN;
   package_credit INTEGER;
   refund_amt NUMERIC;
+  _session_date DATE;
 BEGIN
   SELECT COUNT(*) = 1 INTO is_valid_course_offering_identifier
   FROM Course_Offerings
-  WHERE course_id = course_id AND launch_date = launch_date AND sid = session_number;
+  WHERE course_id = courseId AND launch_date = launchDate;
   
   IF is_valid_course_offering_identifier = FALSE THEN
   	RAISE EXCEPTION 'Invalid course offering identifier.';
   END IF;
 
-  SELECT COUNT(*) = 1 INTO is_valid_registration_identifier
+  SELECT COUNT(*) > 0 INTO is_valid_registration_identifier
   FROM Registers
-  WHERE cust_id = customer_id AND course_id = course_id AND launch_date = launch_date AND sid = session_number;
-  
-  IF is_valid_registration_identifier = FALSE THEN
-  	RAISE EXCEPTION 'Invalid registration details.';
-  END IF;
+  WHERE cust_id = customer_id AND course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
   
   SELECT COUNT(*) > 0 INTO did_redeem
   FROM Redeems
-  WHERE cust_id = customer_id AND course_id = courseId AND launch_date = launchDate AND session_number = sessionNumber;
+  WHERE cust_id = customer_id AND course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
+
+  SELECT session_date INTO _session_date
+  FROM Course_Offering_Sessions
+  WHERE course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
+
+  IF (is_valid_registration_identifier = FALSE) AND (did_redeem = FALSE) THEN
+  	RAISE EXCEPTION 'Invalid registration or redemption details.';
+  END IF;
+
+  IF _session_date < CURRENT_DATE THEN
+    RAISE EXCEPTION 'Session date is already over.';
+  END IF;
   
   IF did_redeem = TRUE THEN
   	package_credit := 1;
@@ -978,12 +987,12 @@ BEGIN
   ELSE
   	SELECT fees * 0.9 INTO refund_amt
 	FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
-	WHERE course_id = courseId AND launch_date = launchDate AND session_number = sessionNumber;
+	WHERE course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
 	
 	package_credit := NULL;
   END IF;
 
-  INSERT INTO Cancels(cancel_date, cust_id, launch_date, package_credit, refund_amt, sid, course_id) VALUES(CURRENT_DATE, launch_date, package_credit, refund_amt, session_number, course_id);
+  INSERT INTO Cancels(cancel_date, cust_id, launch_date, package_credit, refund_amt, sid, course_id) VALUES(CURRENT_DATE, customer_id, launchDate, package_credit, refund_amt, sessionNumber, courseId);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1416,11 +1425,16 @@ BEGIN
     HAVING COUNT(*) >= 2),
   Offering_Registrations AS (
     SELECT F.course_id AS course_id, C.launch_date AS launch_date, C.start_date AS start_date,
-	COALESCE(
+	(COALESCE(
 		(SELECT CAST(COUNT(*) AS INTEGER)
 	    FROM Registers R
 	 	WHERE R.course_id = F.course_id AND launch_date = C.launch_date
-	 	GROUP BY F.course_id, C.launch_date), 0) AS num_registrations
+	 	GROUP BY F.course_id, C.launch_date), 0) +
+    COALESCE(
+		(SELECT CAST(COUNT(*) AS INTEGER)
+	    FROM Redeems R
+	 	WHERE R.course_id = F.course_id AND launch_date = C.launch_date
+	 	GROUP BY F.course_id, C.launch_date), 0)) AS num_registrations
     FROM Filtered_Courses F NATURAL JOIN Course_Offerings C NATURAL JOIN Course_Offering_Sessions S
     GROUP BY F.course_id, C.launch_date, C.start_date),
   Latest_Offering_Registrations AS (
@@ -1524,8 +1538,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (30) view_manager_report (Siddarth) */
-
-
 CREATE OR REPLACE FUNCTION view_manager_report()
 RETURNS TABLE(manager_eid INTEGER, manager_name TEXT, total_num_of_managed_course_areas BIGINT, total_num_of_course_offerings_ended BIGINT, total_net_registration_fees NUMERIC, top_course_offering_title TEXT) AS $$
 DECLARE
@@ -1604,7 +1616,7 @@ With
 	),
 	Manager_Course_Offering_Details_Including_Top_Course_Offering AS
 	(
-		SELECT eid, employee_name, count(distinct course_area_name) as num_of_course_areas_managed, count(distinct(course_id + launch_date)) as num_of_course_offerings_managed
+		SELECT eid, employee_name, count(distinct course_area_name) as num_of_course_areas_managed, count(course_id) as num_of_course_offerings_managed
 		FROM Managers NATURAL JOIN Employees NATURAL LEFT OUTER JOIN Course_Areas NATURAL LEFT OUTER JOIN Courses NATURAL LEFT OUTER JOIN Course_Offerings
 		GROUP BY eid, employee_name
 	)

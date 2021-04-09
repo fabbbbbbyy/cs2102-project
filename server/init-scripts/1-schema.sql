@@ -311,7 +311,7 @@ BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION course_offering_timeslot_verification_func();
 
 /* Trigger (2) Start date, end date, and seating capacity of a course offering is determined by its sessions (Gerren, Kevin) */
-CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_func() 
+CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_seating_capacity_func() 
 RETURNS TRIGGER AS $$
 DECLARE
   earliest_session_date DATE;
@@ -346,9 +346,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER set_course_offering_start_end_date
+CREATE TRIGGER set_course_offering_start_end_date_seating_capacity
 AFTER INSERT OR DELETE OR UPDATE ON Conducts
-FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
+FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_seating_capacity_func();
 
 /* Trigger (4) Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated (Kevin) */
 CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
@@ -774,7 +774,7 @@ BEGIN
         RAISE EXCEPTION 'Only one of package credit and refund amount must be null in the Cancels table';
     END IF;
 
-    SELECT (NEW.cancel_date - session_date) < 7 INTO is_late_cancellation
+    SELECT (session_date - NEW.cancel_date) < 7 INTO is_late_cancellation
     FROM Course_Offering_Sessions
     WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
 
@@ -1234,6 +1234,27 @@ FOR EACH ROW EXECUTE FUNCTION check_pay_slip_corresponds_to_part_time_emp();
 
 /* Trigger (32) Check if Course_Offerings has at least 1 Course_Offering_Sessions. Deferrable initially deferred. 
 Prevent from just inserting into Course_Offering. (After) (Kevin) */
+CREATE OR REPLACE FUNCTION course_offering_at_least_one_session_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  has_sessions BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO has_sessions
+  FROM Course_Offering_Sessions
+  WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+
+  IF has_sessions = FALSE THEN
+    RAISE EXCEPTION 'Course offerings must have at least one session';
+  END IF;
+
+  RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER course_offering_at_least_one_session
+AFTER INSERT OR UPDATE ON Course_Offerings
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION course_offering_at_least_one_session_func();
 
 /* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems.
     (Trigger on insertion or update of Cancels table) (Gerren) */
@@ -1527,6 +1548,138 @@ CREATE TRIGGER consecutive_session_numbering
 BEFORE INSERT ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION consecutive_session_numbering_func();
 
+/* Trigger (39) Do not allow deletion of Part Time Employees unless it is also deleted from Employees table */
+CREATE OR REPLACE FUNCTION check_if_part_time_emp_exist_in_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_eid_exist_in_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_eid_exist_in_emp
+  FROM Employees
+  WHERE eid = OLD.eid;
+
+  IF does_eid_exist_in_emp THEN
+    RAISE EXCEPTION 'Deletion of part time employee not allowed because eid of part time employee still exists in employee';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_part_time_eid_does_not_exist_in_employees
+AFTER DELETE ON Part_Time_Employees
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_part_time_emp_exist_in_employees();
+
+/* Trigger (40) Do not allow deletion of Full Time Employees unless it is also delete from Employees table */
+CREATE OR REPLACE FUNCTION check_if_full_time_emp_exist_in_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_eid_exist_in_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_eid_exist_in_emp
+  FROM Employees
+  WHERE eid = OLD.eid;
+
+  IF does_eid_exist_in_emp THEN
+    RAISE EXCEPTION 'Deletion of full time employee not allowed because eid of full time employee still exists in employee';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_full_time_eid_does_not_exist_in_employees
+AFTER DELETE ON Full_Time_Employees
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_full_time_emp_exist_in_employees();
+
+/* Trigger (41) Do not allow deletion of administrators unless it is also deleted from Full Time Employees table */
+CREATE OR REPLACE FUNCTION check_if_admin_exist_in_full_time_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_admin_id_exist_in_full_time_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_admin_id_exist_in_full_time_emp
+  FROM Full_Time_Employees
+  WHERE eid = OLD.eid;
+
+   IF does_admin_id_exist_in_full_time_emp THEN
+    RAISE EXCEPTION 'Deletion of administrator not allowed because id of administrator still exists in full time employees';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_admin_id_does_not_exist_in_full_time_employees
+AFTER DELETE ON Administrators
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_admin_exist_in_full_time_employees();
+
+/* Trigger (42) Do not allow deletion of manager unless it is also deleted from Full Time Employees table */
+CREATE OR REPLACE FUNCTION check_if_manager_exist_in_full_time_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_manager_id_exist_in_full_time_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_manager_id_exist_in_full_time_emp
+  FROM Full_Time_Employees
+  WHERE eid = OLD.eid;
+
+   IF does_manager_id_exist_in_full_time_emp THEN
+    RAISE EXCEPTION 'Deletion of manager not allowed because id of manager still exists in full time employees';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_manager_id_does_not_exist_in_full_time_employees
+AFTER DELETE ON Managers
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_manager_exist_in_full_time_employees();
+
+/* Trigger (43) Do not allow deletion of part time instructor unless it is also deleted from Part Time Employees table */
+CREATE OR REPLACE FUNCTION check_if_part_time_instruc_id_exist_in_part_time_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_part_time_instruc_id_exist_in_part_time_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_part_time_instruc_id_exist_in_part_time_emp
+  FROM Part_Time_Employees
+  WHERE eid = OLD.instructor_id;
+
+   IF does_part_time_instruc_id_exist_in_part_time_emp THEN
+    RAISE EXCEPTION 'Deletion of part time instructor not allowed because id of part time instructor still exists in part time employees';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_part_time_instruc_id_does_not_exist_in_part_time_employees
+AFTER DELETE ON Part_Time_Instructors
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_part_time_instruc_id_exist_in_part_time_employees();
+
+/* Trigger (44) Do not allow deletion of full time instructor unless it is also deleted from Full Time Employees table */
+CREATE OR REPLACE FUNCTION check_if_full_time_instruc_id_exist_in_full_time_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_full_time_instruc_id_exist_in_full_time_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_full_time_instruc_id_exist_in_full_time_emp
+  FROM Full_Time_Employees
+  WHERE eid = OLD.instructor_id;
+
+   IF does_full_time_instruc_id_exist_in_full_time_emp THEN
+    RAISE EXCEPTION 'Deletion of full time instructor not allowed because id of full time instructor still exists in full time employees';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_full_time_instruc_id_does_not_exist_in_full_time_employees
+AFTER DELETE ON Full_Time_Instructors
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_full_time_instruc_id_exist_in_full_time_employees();
+
 CREATE OR REPLACE FUNCTION delete_redeems_func()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -1540,4 +1693,3 @@ CREATE CONSTRAINT TRIGGER delete_redeems_trigger
 AFTER DELETE ON Redeems
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION delete_redeems_func;
-

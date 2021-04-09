@@ -449,16 +449,16 @@ insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_c
 insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(2, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
 insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(8, '2021-07-02', 1, '2021-06-01', 1, NULL, 0.0);
 
-insert into Buys values(1, 1, '2021-04-02', 5);
-insert into Buys values(2, 1, '2021-04-02', 5);
-insert into Buys values(3, 1, '2021-04-02', 5);
+insert into Buys values(1, 1, '2021-04-02', 1);
+insert into Buys values(2, 1, '2021-04-02', 1);
+insert into Buys values(3, 1, '2021-04-02', 1);
 insert into Buys values(4, 1, '2021-04-02', 1);
-insert into Buys values(5, 2, '2021-04-02', 5);
-insert into Buys values(6, 2, '2021-04-02', 5);
-insert into Buys values(7, 2, '2021-04-02', 5);
-insert into Buys values(8, 3, '2021-04-02', 0);
-insert into Buys values(8, 7, '2021-04-02', 5);
-insert into Buys values(9, 3, '2021-04-02', 5);
+insert into Buys values(5, 2, '2021-04-02', 2);
+insert into Buys values(6, 2, '2021-04-02', 2);
+insert into Buys values(7, 2, '2021-04-02', 2);
+insert into Buys values(8, 7, '2021-04-02', 7);
+insert into Buys values(9, 3, '2021-04-02', 3);
+insert into Buys values(10, 4, '2021-04-02', 4);
 
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-06-01', 10, 8, 7, '2021-04-02');
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 8, 7, '2021-04-02');

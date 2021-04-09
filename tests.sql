@@ -143,6 +143,11 @@ SELECT find_instructors(11, '2021-01-01', 9);
 
 /* Function (7) get_available_instructors (Gerren) */
 
+/* Useful visualisation queries */
+SELECT course_id, instructor_id, launch_date, sid, session_date, start_time_hour, end_time_hour 
+FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Course_Offering_Sessions
+ORDER BY course_id, session_date, instructor_id;
+
 /* Set 1: Verify if available hours is limited if instructor teaches another session on one of the days (Passing) */
 SELECT * FROM get_available_instructors(1, '2021-03-15', '2021-03-16');
 SELECT * FROM get_available_instructors(2, '2021-03-15', '2021-03-16');
@@ -340,14 +345,42 @@ SELECT get_my_course_package(11);
 
 /* Function (15) get_available_course_offerings (Gerren) */
 
+/* Useful visualisation queries*/
+SELECT cust_id, session_date, course_id, launch_date, sid, start_time_hour, end_time_hour
+FROM Redeems NATURAL JOIN Course_Offering_Sessions
+UNION
+SELECT cust_id, session_date, course_id, launch_date, sid, start_time_hour, end_time_hour
+FROM Registers NATURAL JOIN Course_Offering_Sessions
+
+WHERE session_date >= CURRENT_DATE
+ORDER BY cust_id, session_date;
+
 /* Set 1: Verify that the function works in the normal case (Passing) */
 SELECT * FROM get_available_course_offerings();
 
-/* Set 2: Verify that the function gives accurate results when number of sessions registered increases (Insert own data, Passing) */
-/* Set 3: Verify that the function gives accurate results when number of sessions registered decreases (Insert own data, Passing) */
-/* Set 4: Verify that the function gives accurate results when number of sessions redeemed increases (Insert own data, Passing) */
-/* Set 5: Verify that the function gives accurate results when number of sessions redeemed decreases (Insert own data, Passing) */
-/* Set 6: Verify that the function gives accurate results when offerings have remaining seats which decreased 0 (Insert own data, Passing) */
+/* Set 2: Verify that the function gives accurate results when number of sessions registered increases (Passing) */
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
+
+/* Set 3: Verify that the function gives accurate results when number of sessions registered decreases (Passing) */
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
+CALL cancel_registration(8, 1, '2021-06-01', 1);
+
+/* Set 4: Verify that the function gives accurate results when number of sessions redeemed increases (Passing) */
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-06-01', 10, 9, 3, '2021-04-02');
+
+/* Set 5: Verify that the function gives accurate results when number of sessions redeemed decreases (Passing) */
+CALL cancel_registration(8, 10, '2021-06-01', 2);
+
+/* Set 6: Verify that the function gives accurate results when offerings have remaining seats which decreased 0 (Passing) */
+/* Add and edit preprocessing data in data.sql */
+INSERT INTO Rooms(seating_capacity, location) values(1, 'NUS');
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 1, 'Ethics', '2021-08-01', 9);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 2, 'Ethics', '2021-08-01', 9);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 3, 'Ethics', '2021-08-01', 9);
+
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 1, '2021-08-01', 9, 1, 1, '2021-04-02');
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(2, '2021-08-02', 2, '2021-08-01', 9);
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-08-01', 9, 3, 1, '2021-04-02');
 
 /* Function (16) get_available_course_sessions (Kevin) */
 
@@ -355,9 +388,14 @@ SELECT * FROM get_available_course_offerings();
 SELECT get_available_course_sessions(10, '2021-06-01');
 
 /* Set 2: Verify that the function excludes sessions with no seats left (insert own data) (Passing) */
-SELECT get_available_course_sessions(10, '2021-06-01');
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(1, '2021-08-02', 3, '2021-08-01', 9);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(2, '2021-08-02', 3, '2021-08-01', 9);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(3, '2021-08-02', 3, '2021-08-01', 9);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(4, '2021-08-02', 3, '2021-08-01', 9);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(5, '2021-08-02', 3, '2021-08-01', 9);
+SELECT get_available_course_sessions(9, '2021-08-01');
 
-/* Set 3: Verify that the function excludes sessions which have dates earlier than the current date (Passing) */
+/* Set 3: Verify that the function throws an exception if the registration deadline is over (Passing) */
 SELECT get_available_course_sessions(1, '2021-01-01');
 
 /* Function (17) register_session (Fabian) */
@@ -426,7 +464,20 @@ CALL update_course_session(8, 1, '2021-06-01', 2);
 CALL update_course_session(3, 1, '2021-01-01', 3);
 CALL update_course_session(8, 2, '2021-02-01', 3);
 
-/* Set 3: Verify that exception is thrown if new to be updated with is already over (Insert own data, Passing) */
+/* Set 3: Verify that exception is thrown if new session to be updated with is already over (Passing) */
+/* Add and edit preprocessing data in data.sql */
+INSERT INTO Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(10, '2021-03-25', 20, '2021-04-08', '2021-04-19', 450, '2021-03-28', 0, 70);
+INSERT INTO Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-25', 10, '2021-04-08', 9, 11);
+INSERT INTO Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-03-25', 10, '2021-04-15', 14, 16);
+INSERT INTO Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-03-25', 10, '2021-04-19', 16, 18);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 1, 'Calculus', '2021-03-25', 10);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 2, 'Calculus', '2021-03-25', 10);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 3, 'Calculus', '2021-03-25', 10);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) values(1, '2021-03-25', 2, '2021-03-25', 10);
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-03-26', 2, '2021-03-25', 10, 2, 1, '2021-04-02');
+
+CALL update_course_session(1, 10, '2021-03-25', 1);
+CALL update_course_session(2, 10, '2021-03-25', 1);
 
 /* Set 4: Verify that exception is thrown if customer is already in the session he/she wishes to change to (Passing) */
 CALL update_course_session(8, 10, '2021-06-01', 2);
@@ -446,21 +497,32 @@ CALL update_course_session(8, 2, '2021-08-01', 2);
 /* Set 8: Verify that exception is thrown if customer did not register for the offering which new session belongs to (Passing) */
 CALL update_course_session(8, 7, '2021-06-01', 2);
 
-/* Set 9: Verify that exception is thrown if new session does not have enough seating capacity to accomodate (Insert own data, Passing) */
+/* Set 9: Verify that exception is thrown if new session does not have enough seating capacity to accomodate (Passing) */
+/* Add and edit preprocessing data in data.sql */
+INSERT INTO Rooms(seating_capacity, location) values(1, 'NUS');
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 1, 'Ethics', '2021-08-01', 9);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 2, 'Ethics', '2021-08-01', 9);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 3, 'Ethics', '2021-08-01', 9);
+
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 1, '2021-08-01', 9, 1, 1, '2021-04-02');
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(2, '2021-08-02', 2, '2021-08-01', 9);
+CALL update_course_session(1, 9, '2021-08-01', 2);
+CALL update_course_session(2, 9, '2021-08-01', 1);
 
 /* Function (20) cancel_registration (Kevin) */
 
-/* Set 1: Verify that the function works in the normal case (Failing) */
-CALL cancel_registration(8, 1, '2021-06-01', 1); /* Column sid does not exist. */
+/* Set 1: Verify that the function works in the normal case (Passing) */
+CALL cancel_registration(8, 1, '2021-01-01', 1); /* Cancel from Registers table */
+CALL cancel_registration(8, 8, '2021-07-01', 3); /* Cancel from Redeems table */
 
-/* Set 2: Verify that the function throws an exception when no such registration exists in Registers or Redeems (Failing) */
-CALL cancel_registration(213, 33, '2021-02-01', 55); /* Column sid does not exist. */
+/* Set 2: Verify that the function throws an exception when no such registration exists in Registers or Redeems (Passing) */
+CALL cancel_registration(213, 33, '2021-02-01', 55);
 
-/* Set 3: Verify that the function throws an exception when the session found is already over (Failing) */
-CALL cancel_registration(1, 1, '2021-01-01', 1); /* Column sid does not exist. */
+/* Set 3: Verify that the function throws an exception when the session found is already over (Passing) */
+CALL cancel_registration(3, 1, '2021-01-01', 1);
 
-/* Set 4: Verify that the function throws an exception when no such Course_Offering exists (Failing) */
-CALL cancel_registration(1, 1, '2022-10-01', 1); /* Column sid does not exist. */
+/* Set 4: Verify that the function throws an exception when no such Course_Offering exists (Passing) */
+CALL cancel_registration(1, 1, '2022-10-01', 1);
 
 /* Function (21) update_instructor (Fabian) */
 
@@ -576,11 +638,8 @@ SELECT * FROM top_packages(50);
 /* Function (28) popular_courses (Kevin) */
 /* Course start date is within this year; has >= 2 offerings; for every pair of offerings, later offering has more people */
 
-/* Set 1: Verify that the function works in the normal case (Failing) */ 
+/* Set 1: Verify that the function works in the normal case (Passing) */ 
 SELECT popular_courses(); 
-/* Added test data for a new course offering for course id 5 in course_offerings, 
-conducts, and having more people register for this one with a later launch and start date. 
-But, it doesn't return anything. */
 
 /* Function (29) view_summary_report (Fabian) */
 
