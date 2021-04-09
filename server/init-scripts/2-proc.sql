@@ -1400,6 +1400,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION popular_courses()
 RETURNS TABLE (course_id INTEGER, course_title TEXT, course_area_name TEXT, num_offerings INTEGER, latest_offering_num_registrations INTEGER) AS $$
 BEGIN
+  RETURN QUERY
   WITH Filtered_Courses AS (
     SELECT C.course_id AS course_id, C.title AS title,
     C.course_area_name AS course_area_name, CAST(COUNT(*) AS INTEGER) AS num_offerings

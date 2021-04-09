@@ -559,6 +559,12 @@ SELECT * FROM top_packages(50);
 /* Function (28) popular_courses (Kevin) */
 /* Course start date is within this year; has >= 2 offerings; for every pair of offerings, later offering has more people */
 
+/* Set 1: Verify that the function works in the normal case (Failing) */ 
+SELECT popular_courses(); 
+/* Added test data for a new course offering for course id 5 in course_offerings, 
+conducts, and having more people register for this one with a later launch and start date. 
+But, it doesn't return anything. */
+
 /* Function (29) view_summary_report (Fabian) */
 
 /* Set 1: Verify that the function works in the normal case (Passing) */
