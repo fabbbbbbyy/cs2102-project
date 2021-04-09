@@ -1547,3 +1547,135 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER consecutive_session_numbering
 BEFORE INSERT ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION consecutive_session_numbering_func();
+
+/* Trigger (39) Do not allow deletion of Part Time Employees unless it is also deleted from Employees table */
+CREATE OR REPLACE FUNCTION check_if_part_time_emp_exist_in_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_eid_exist_in_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_eid_exist_in_emp
+  FROM Employees
+  WHERE eid = OLD.eid;
+
+  IF does_eid_exist_in_emp THEN
+    RAISE EXCEPTION 'Deletion of part time employee not allowed because eid of part time employee still exists in employee';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_part_time_eid_does_not_exist_in_employees
+AFTER DELETE ON Part_Time_Employees
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_part_time_emp_exist_in_employees();
+
+/* Trigger (40) Do not allow deletion of Full Time Employees unless it is also delete from Employees table */
+CREATE OR REPLACE FUNCTION check_if_full_time_emp_exist_in_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_eid_exist_in_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_eid_exist_in_emp
+  FROM Employees
+  WHERE eid = OLD.eid;
+
+  IF does_eid_exist_in_emp THEN
+    RAISE EXCEPTION 'Deletion of full time employee not allowed because eid of full time employee still exists in employee';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_full_time_eid_does_not_exist_in_employees
+AFTER DELETE ON Full_Time_Employees
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_full_time_emp_exist_in_employees();
+
+/* Trigger (41) Do not allow deletion of administrators unless it is also deleted from Full Time Employees table */
+CREATE OR REPLACE FUNCTION check_if_admin_exist_in_full_time_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_admin_id_exist_in_full_time_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_admin_id_exist_in_full_time_emp
+  FROM Full_Time_Employees
+  WHERE eid = OLD.eid;
+
+   IF does_admin_id_exist_in_full_time_emp THEN
+    RAISE EXCEPTION 'Deletion of administrator not allowed because id of administrator still exists in full time employees';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_admin_id_does_not_exist_in_full_time_employees
+AFTER DELETE ON Administrators
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_admin_exist_in_full_time_employees();
+
+/* Trigger (42) Do not allow deletion of manager unless it is also deleted from Full Time Employees table */
+CREATE OR REPLACE FUNCTION check_if_manager_exist_in_full_time_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_manager_id_exist_in_full_time_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_manager_id_exist_in_full_time_emp
+  FROM Full_Time_Employees
+  WHERE eid = OLD.eid;
+
+   IF does_manager_id_exist_in_full_time_emp THEN
+    RAISE EXCEPTION 'Deletion of manager not allowed because id of manager still exists in full time employees';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_manager_id_does_not_exist_in_full_time_employees
+AFTER DELETE ON Managers
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_manager_exist_in_full_time_employees();
+
+/* Trigger (43) Do not allow deletion of part time instructor unless it is also deleted from Part Time Employees table */
+CREATE OR REPLACE FUNCTION check_if_part_time_instruc_id_exist_in_part_time_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_part_time_instruc_id_exist_in_part_time_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_part_time_instruc_id_exist_in_part_time_emp
+  FROM Part_Time_Employees
+  WHERE eid = OLD.instructor_id;
+
+   IF does_part_time_instruc_id_exist_in_part_time_emp THEN
+    RAISE EXCEPTION 'Deletion of part time instructor not allowed because id of part time instructor still exists in part time employees';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_part_time_instruc_id_does_not_exist_in_part_time_employees
+AFTER DELETE ON Part_Time_Instructors
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_part_time_instruc_id_exist_in_part_time_employees();
+
+/* Trigger (44) Do not allow deletion of full time instructor unless it is also deleted from Full Time Employees table */
+CREATE OR REPLACE FUNCTION check_if_full_time_instruc_id_exist_in_full_time_employees()
+RETURNS TRIGGER AS $$
+DECLARE
+  does_full_time_instruc_id_exist_in_full_time_emp BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO does_full_time_instruc_id_exist_in_full_time_emp
+  FROM Full_Time_Employees
+  WHERE eid = OLD.instructor_id;
+
+   IF does_full_time_instruc_id_exist_in_full_time_emp THEN
+    RAISE EXCEPTION 'Deletion of full time instructor not allowed because id of full time instructor still exists in full time employees';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_full_time_instruc_id_does_not_exist_in_full_time_employees
+AFTER DELETE ON Full_Time_Instructors
+DEFERRABLE INITIALLY IMMEDIATE
+FOR EACH ROW EXECUTE FUNCTION check_if_full_time_instruc_id_exist_in_full_time_employees();
