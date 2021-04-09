@@ -91,9 +91,6 @@ BEGIN
       RAISE EXCEPTION 'Join date is after the current date.';
     END IF;
     IF (employee_category = 'Manager') THEN
-        IF course_areas = null OR cardinality(course_areas) = 0 THEN
-            RAISE EXCEPTION 'Course areas must be not be empty for a manager.';
-        END IF;
         SELECT add_employee_helper(home_address, contact_number, email_address, join_date, name) into eid;
         CALL add_fulltime_employee_helper(eid, salary_rate);
         CALL add_manager_helper(eid);
@@ -226,12 +223,12 @@ BEGIN
   	RAISE EXCEPTION 'Invalid customer ID.';
   END IF;
 
-  DELETE FROM Credit_Cards WHERE credit_card_num = previous_credit_card_num;
-  INSERT INTO Credit_Cards(credit_card_num, expiry_date, from_date, cvv) VALUES(credit_card_no, expiration_date, CURRENT_DATE, CVV_code);
-
   UPDATE Customers
   SET credit_card_num = credit_card_no
   WHERE cust_id = customer_id;
+  
+  DELETE FROM Credit_Cards WHERE credit_card_num = previous_credit_card_num;
+  INSERT INTO Credit_Cards(credit_card_num, expiry_date, from_date, cvv) VALUES(credit_card_no, expiration_date, CURRENT_DATE, CVV_code);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -770,7 +767,9 @@ BEGIN
     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Instructors NATURAL JOIN Rooms),
   Result AS (
 	SELECT C.session_date, C.start_time_hour, (SELECT employee_name FROM Employees WHERE eid = C.instructor_id),
-	  C.seating_capacity - (SELECT CAST(COUNT(*) AS INT) FROM Registers WHERE Registers.sid = C.sid) AS number_remaining_seats
+	  (C.seating_capacity
+        - (SELECT CAST(COUNT(*) AS INT) FROM Registers R WHERE R.sid = C.sid)
+        - (SELECT CAST(COUNT(*) AS INT) FROM Redeems R WHERE R.sid = C.sid)) AS number_remaining_seats
     FROM C
     WHERE C.course_id = courseId AND C.launch_date = launchDate
     GROUP BY C.sid, C.session_date, C.start_time_hour, C.instructor_id, C.seating_capacity)
@@ -1339,6 +1338,14 @@ BEGIN
       FROM Registers NATURAL JOIN Customers
       GROUP BY cust_id
       HAVING EXTRACT(year from AGE(current_date, max(register_date))) * 12 + EXTRACT(month from AGE(current_date, max(register_date))) + 1 > 6
+
+      UNION
+
+      SELECT cust_id
+      FROM Redeems NATURAL JOIN Customers
+      GROUP BY cust_id
+      HAVING EXTRACT(year from AGE(current_date, max(redemption_date))) * 12 + EXTRACT(month from AGE(current_date, max(redemption_date))) + 1 > 6
+
     ),
   Recent_Course_Areas_Registered AS
   (
