@@ -1534,8 +1534,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (30) view_manager_report (Siddarth) */
-
-
 CREATE OR REPLACE FUNCTION view_manager_report()
 RETURNS TABLE(manager_eid INTEGER, manager_name TEXT, total_num_of_managed_course_areas BIGINT, total_num_of_course_offerings_ended BIGINT, total_net_registration_fees NUMERIC, top_course_offering_title TEXT) AS $$
 DECLARE
