@@ -143,6 +143,11 @@ SELECT find_instructors(11, '2021-01-01', 9);
 
 /* Function (7) get_available_instructors (Gerren) */
 
+/* Useful visualisation queries */
+SELECT course_id, instructor_id, launch_date, sid, session_date, start_time_hour, end_time_hour 
+FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Course_Offering_Sessions
+ORDER BY course_id, session_date, instructor_id;
+
 /* Set 1: Verify if available hours is limited if instructor teaches another session on one of the days (Passing) */
 SELECT * FROM get_available_instructors(1, '2021-03-15', '2021-03-16');
 SELECT * FROM get_available_instructors(2, '2021-03-15', '2021-03-16');
@@ -440,7 +445,20 @@ CALL update_course_session(8, 1, '2021-06-01', 2);
 CALL update_course_session(3, 1, '2021-01-01', 3);
 CALL update_course_session(8, 2, '2021-02-01', 3);
 
-/* Set 3: Verify that exception is thrown if new to be updated with is already over (Insert own data, Passing) */
+/* Set 3: Verify that exception is thrown if new session to be updated with is already over (Passing) */
+/* Add and edit preprocessing data in data.sql */
+INSERT INTO Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(10, '2021-03-25', 20, '2021-04-08', '2021-04-19', 450, '2021-03-28', 0, 70);
+INSERT INTO Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-25', 10, '2021-04-08', 9, 11);
+INSERT INTO Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-03-25', 10, '2021-04-15', 14, 16);
+INSERT INTO Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-03-25', 10, '2021-04-19', 16, 18);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 1, 'Calculus', '2021-03-25', 10);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 2, 'Calculus', '2021-03-25', 10);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 3, 'Calculus', '2021-03-25', 10);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) values(1, '2021-03-25', 2, '2021-03-25', 10);
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-03-26', 2, '2021-03-25', 10, 2, 1, '2021-04-02');
+
+CALL update_course_session(1, 10, '2021-03-25', 1);
+CALL update_course_session(2, 10, '2021-03-25', 1);
 
 /* Set 4: Verify that exception is thrown if customer is already in the session he/she wishes to change to (Passing) */
 CALL update_course_session(8, 10, '2021-06-01', 2);
@@ -461,6 +479,16 @@ CALL update_course_session(8, 2, '2021-08-01', 2);
 CALL update_course_session(8, 7, '2021-06-01', 2);
 
 /* Set 9: Verify that exception is thrown if new session does not have enough seating capacity to accomodate (Insert own data, Passing) */
+/* Add and edit preprocessing data in data.sql */
+INSERT INTO Rooms(seating_capacity, location) values(1, 'NUS');
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 1, 'Ethics', '2021-08-01', 9);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 2, 'Ethics', '2021-08-01', 9);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 3, 'Ethics', '2021-08-01', 9);
+
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 1, '2021-08-01', 9, 1, 1, '2021-04-02');
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(2, '2021-08-02', 2, '2021-08-01', 9);
+CALL update_course_session(1, 9, '2021-08-01', 2);
+CALL update_course_session(2, 9, '2021-08-01', 1);
 
 /* Function (20) cancel_registration (Kevin) */
 

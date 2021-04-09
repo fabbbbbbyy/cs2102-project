@@ -358,7 +358,7 @@ BEGIN
           SELECT COUNT(course_id) > 0 INTO is_instructor_busy
           FROM Conducts NATURAL JOIN Instructors NATURAL JOIN Course_Offering_Sessions
           WHERE session_date = day AND Conducts.instructor_id = instructor_identifier AND Conducts.course_area_name = current_instructor_area 
-          AND range_of_hours[i] >= start_time_hour AND range_of_hours[i] < end_time_hour;
+          AND range_of_hours[i] >= start_time_hour - 1 AND range_of_hours[i] < end_time_hour + 1;
           IF is_instructor_busy = FALSE THEN 
             available_hours := array_append(available_hours, range_of_hours[i]);
           END IF;    
