@@ -48,7 +48,7 @@ create table Customers (
   email text,
   /* Assume that user is from Singapore, starting digit must be 6, 8, 9, 8 digit number, check in range*/
   phone_num integer,
-  credit_card_num text unique not null references Credit_Cards deferrable initially deferred
+  credit_card_num text unique not null references Credit_Cards on update cascade deferrable initially deferred
 );
 
 /* (CORRECT) */
