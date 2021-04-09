@@ -629,6 +629,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION get_available_course_packages()
 RETURNS TABLE(name TEXT, num_free_registrations INTEGER, sale_end_date DATE, price NUMERIC) AS $$
 BEGIN
+  RETURN QUERY
   SELECT CP.course_package_name, CP.num_free_registrations, CP.sale_end_date, CP.price
   FROM Course_Packages CP
   WHERE CP.sale_start_date <= CURRENT_DATE AND CP.sale_end_date >= CURRENT_DATE;
@@ -759,6 +760,7 @@ BEGIN
     RAISE EXCEPTION 'Registration deadline for the course is over.';
   END IF;
   
+  RETURN QUERY
   WITH C AS (
     SELECT *
     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Instructors NATURAL JOIN Rooms),

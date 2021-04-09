@@ -449,6 +449,18 @@ CALL update_course_session(8, 7, '2021-06-01', 2);
 
 /* Function (20) cancel_registration (Kevin) */
 
+/* Set 1: Verify that the function works in the normal case (Failing) */
+CALL cancel_registration(8, 1, '2021-06-01', 1); /* Column sid does not exist. */
+
+/* Set 2: Verify that the function throws an exception when no such registration exists in Registers or Redeems (Failing) */
+CALL cancel_registration(213, 33, '2021-02-01', 55); /* Column sid does not exist. */
+
+/* Set 3: Verify that the function throws an exception when the session found is already over (Failing) */
+CALL cancel_registration(1, 1, '2021-01-01', 1); /* Column sid does not exist. */
+
+/* Set 4: Verify that the function throws an exception when no such Course_Offering exists (Failing) */
+CALL cancel_registration(1, 1, '2022-10-01', 1); /* Column sid does not exist. */
+
 /* Function (21) update_instructor (Fabian) */
 
 /* Set 1: Verify that the function works in the normal case (Passing) */
@@ -508,25 +520,29 @@ CALL add_session(1, '2021-06-01', 4, '2021-07-09', 9, 1, 1);
 CALL add_session(1, '2021-06-01', 4, '2021-07-01', 9, 1, 1);
 CALL add_session(1, '2021-06-01', 4, '2021-08-15', 9, 1, 1);
 
-/* Set 2: Verify that the function throws an exception if (course_id, launch_date) does not exist (Passing) */
+/* Set 2: Verify that the function throws an exception if (course_id, launch_date) does not exist 
+(Gives me next session number error instead of telling me the course offering does not exist) */
 CALL add_session(1, '2021-06-02', 4, '2021-07-09', 9, 1, 1);
 
 /* Set 3: Verify that the function throws an exception if the instructor with instructor_id does not exist (Passing) */
 CALL add_session(1, '2021-06-01', 4, '2021-07-09', 9, 100, 1);
 
-/* Set 4: Verify that the function throws an exception if the instructor does not specialise in the course area (trigger) (Passing) */
+/* Set 4: Verify that the function throws an exception if the instructor does not specialise in the course area (trigger) 
+(Gives me next session number error instead of telling me the instructor does not specialise in the course area) */
 CALL add_session(1, '2021-06-01', 4, '2021-07-09', 9, 2, 1);
 
 /* Set 5: Verify that the function throws an exception if the room does not exist (Passing) */
 CALL add_session(1, '2021-06-01', 4, '2021-07-09', 9, 1, 100);
 
-/* Set 6: Verify that the function throws an exception if session time is invalid (Passing) */
+/* Set 6: Verify that the function throws an exception if session time is invalid 
+(Gives me next session number error instead of telling me the session time is invalid) */
 CALL add_session(1, '2021-06-01', 4, '2021-07-12', 8, 1, 1);
 CALL add_session(1, '2021-06-01', 4, '2021-07-12', 18, 1, 1);
 CALL add_session(1, '2021-06-01', 4, '2021-07-12', 12, 1, 1);
 CALL add_session(1, '2021-06-01', 4, '2021-07-12', 13, 1, 1);
 
-/* Set 7: Verify that the function throws an exception if session time overlaps with an existing session (Passing) */
+/* Set 7: Verify that the function throws an exception if session time overlaps with an existing session
+(Gives me next session number error instead of telling me the session time overlaps) */
 CALL add_session(1, '2021-06-01', 3, '2021-07-16', 14, 1, 1);
 
 /* Set 8: Verify that the function throws an exception if the current date is past the registration deadline (Passing) */
