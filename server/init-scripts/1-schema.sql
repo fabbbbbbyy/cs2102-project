@@ -1658,7 +1658,7 @@ AFTER DELETE ON Part_Time_Instructors
 DEFERRABLE INITIALLY IMMEDIATE
 FOR EACH ROW EXECUTE FUNCTION check_if_part_time_instruc_id_exist_in_part_time_employees();
 
-/* Trigger (45) Do not allow deletion of full time instructor unless it is also deleted from Full Time Employees table */
+/* Trigger (44) Do not allow deletion of full time instructor unless it is also deleted from Full Time Employees table */
 CREATE OR REPLACE FUNCTION check_if_full_time_instruc_id_exist_in_full_time_employees()
 RETURNS TRIGGER AS $$
 DECLARE
