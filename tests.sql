@@ -338,6 +338,9 @@ CALL update_course_session(8, 7, '2021-06-01', 2);
 
 /* Function (20) cancel_registration (Kevin) */
 
+/* Set 1: Verify that the function works in the normal case */
+CALL cancel_registration(3, 1, '2021-01-01', 1);
+
 /* Function (21) update_instructor (Fabian) */
 
 /* Function (22) update_room (Siddarth) */
