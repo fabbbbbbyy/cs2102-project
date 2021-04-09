@@ -2,14 +2,8 @@
 
 /* 
 Additional notes:
-- This schema follows the template ER diagram from left to right as much as possible.
-- The ordering for attributes are in lexographical order and primary and foreign keys are 
-denoted at the bottom for consistent styling across tables.
-- If a table is a combined table between entities, we will have the attributes of the overarching
-entity in lexographical order, followed by the attributes of the 2nd/3rd/etc.. entity similarly
-in lexographical order below it.
-- Attribute types are subject to change.  
-- Decided to use int data type with auto increment for primary keys
+- This schema follows the template ER diagram from left to right as much as possible.  
+- Decided to use serial (integer) data type with auto increment for primary keys.
 */
 
 drop table if exists Course_Packages, Credit_Cards, Customers, Employees, Employee_Pay_Slips, Part_Time_Employees, Full_Time_Employees,
