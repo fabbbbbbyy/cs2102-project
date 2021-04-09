@@ -947,6 +947,7 @@ DECLARE
   did_redeem BOOLEAN;
   package_credit INTEGER;
   refund_amt NUMERIC;
+  _session_date DATE;
 BEGIN
   SELECT COUNT(*) = 1 INTO is_valid_course_offering_identifier
   FROM Course_Offerings
@@ -964,8 +965,16 @@ BEGIN
   FROM Redeems
   WHERE cust_id = customer_id AND course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
 
+  SELECT session_date INTO _session_date
+  FROM Course_Offering_Sessions
+  WHERE course_id = courseId AND launch_date = launchDate AND sid = sessionNumber;
+
   IF (is_valid_registration_identifier = FALSE) AND (did_redeem = FALSE) THEN
   	RAISE EXCEPTION 'Invalid registration or redemption details.';
+  END IF;
+
+  IF _session_date < CURRENT_DATE THEN
+    RAISE EXCEPTION 'Session date is already over.';
   END IF;
   
   IF did_redeem = TRUE THEN

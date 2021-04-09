@@ -505,17 +505,18 @@ CALL update_course_session(2, 9, '2021-08-01', 1);
 
 /* Function (20) cancel_registration (Kevin) */
 
-/* Set 1: Verify that the function works in the normal case (Failing) */
-CALL cancel_registration(8, 1, '2021-06-01', 1); /* Column sid does not exist. */
+/* Set 1: Verify that the function works in the normal case (Passing) */
+CALL cancel_registration(8, 1, '2021-01-01', 1); /* Cancel from Registers table */
+CALL cancel_registration(8, 8, '2021-07-01', 3); /* Cancel from Redeems table */
 
-/* Set 2: Verify that the function throws an exception when no such registration exists in Registers or Redeems (Failing) */
-CALL cancel_registration(213, 33, '2021-02-01', 55); /* Column sid does not exist. */
+/* Set 2: Verify that the function throws an exception when no such registration exists in Registers or Redeems (Passing) */
+CALL cancel_registration(213, 33, '2021-02-01', 55);
 
-/* Set 3: Verify that the function throws an exception when the session found is already over (Failing) */
-CALL cancel_registration(1, 1, '2021-01-01', 1); /* Column sid does not exist. */
+/* Set 3: Verify that the function throws an exception when the session found is already over (Passing) */
+CALL cancel_registration(3, 1, '2021-01-01', 1);
 
-/* Set 4: Verify that the function throws an exception when no such Course_Offering exists (Failing) */
-CALL cancel_registration(1, 1, '2022-10-01', 1); /* Column sid does not exist. */
+/* Set 4: Verify that the function throws an exception when no such Course_Offering exists (Passing) */
+CALL cancel_registration(1, 1, '2022-10-01', 1);
 
 /* Function (21) update_instructor (Fabian) */
 
