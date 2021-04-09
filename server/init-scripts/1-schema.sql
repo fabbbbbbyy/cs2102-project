@@ -1673,3 +1673,72 @@ CREATE CONSTRAINT TRIGGER ensure_full_time_instruc_id_does_not_exist_in_full_tim
 AFTER DELETE ON Full_Time_Instructors
 DEFERRABLE INITIALLY IMMEDIATE
 FOR EACH ROW EXECUTE FUNCTION check_if_full_time_instruc_id_exist_in_full_time_employees();
+
+CREATE OR REPLACE FUNCTION delete_redeems_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  _session_date date;
+BEGIN
+    SELECT session_date
+    FROM Course_Offering_Sessions C
+    WHERE C.sid = OLD.sid
+    AND C.launch_date = OLD.launch_date
+    AND C.course_id = OLD.course_id
+    INTO _session_date;
+
+    IF _session_date < current_date THEN
+      RAISE EXCEPTION 'The redeemed session has already been attended and cannot be deleted from the records.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER delete_redeems_trigger
+AFTER DELETE ON Redeems
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION delete_redeems_func;
+
+CREATE OR REPLACE FUNCTION delete_buys_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  has_redeemed boolean;
+BEGIN
+  SELECT COUNT(*) > 0
+  FROM Redeems R
+  WHERE R.cust_id = OLD.cust_id
+  AND R.package_id = OLD.package_id
+  AND R.purchase_date = OLD.purchase_date
+  INTO has_redeemed;
+
+  IF has_redeemed = TRUE THEN
+    RAISE EXCEPTION 'This customer has already redeemed a session with his package, thus we cannot delete this record.';
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER delete_buys_trigger
+AFTER DELETE ON Buys
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION delete_buys_func;
+
+CREATE OR REPLACE FUNCTION delete_registers_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  _session_date date;
+BEGIN
+  SELECT session_date
+  FROM Course_Offering_Sessions C
+  WHERE C.sid = OLD.sid
+  AND C.launch_date = OLD.launch_date
+  AND C.course_id = OLD.course_id
+  INTO _session_date;
+
+  IF _session_date < current_date THEN
+    RAISE EXCEPTION 'The registered session has already been attended and cannot be deleted from the records.';
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER delete_registers_trigger
+AFTER DELETE ON Registers
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION delete_registers_func;

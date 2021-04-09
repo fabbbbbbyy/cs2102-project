@@ -233,12 +233,13 @@ SELECT find_rooms('2030-20-20', 9, 1);
 /* Set 1: Verify that the function works in the normal case (Passing) */
 SELECT get_available_rooms('2021-06-01', '2021-06-01');
 SELECT get_available_rooms('2021-02-02', '2021-02-03'); 
+SELECT get_available_rooms('2021-02-02', '2021-02-15'); /* Weekends check. */
 
-/* Set 2: Verify that the function throws an exception if the end date is after the start date (Passing) */
+/* Set 2: Verify that the function throws an exception if the end date is before the start date (Passing) */
 SELECT get_available_rooms('2021-06-02', '2021-06-01'); 
 
 /* Set 3: Verify that the function throws an exception for non-existent dates (leap year) (Passing) */
-SELECT FUNCTION get_available_rooms('2022-02-29', '2022-02-29');
+SELECT get_available_rooms('2022-02-29', '2022-02-29');
 
 /* Function (10) add_course_offering (Fabian) */
 
