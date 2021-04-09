@@ -422,12 +422,16 @@ DECLARE
   _current_date date;
   i integer;
 BEGIN
-  IF end_date > start_date THEN
+  IF end_date < start_date THEN
     RAISE EXCEPTION 'End date should not be earlier than start date.';
   END IF;
   _current_date := start_date;
   LOOP 
     EXIT WHEN _current_date > end_date;
+    IF EXTRACT(DOW FROM _current_date) = 0 OR EXTRACT(DOW FROM _current_date) = 6 THEN
+      _current_date := _current_date + interval '1 day';
+      CONTINUE;
+    END IF;
     OPEN curs;
     LOOP
       FETCH curs into r;

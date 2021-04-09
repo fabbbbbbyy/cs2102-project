@@ -1526,3 +1526,18 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER consecutive_session_numbering
 BEFORE INSERT ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION consecutive_session_numbering_func();
+
+CREATE OR REPLACE FUNCTION delete_redeems_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  
+BEGIN
+    
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER delete_redeems_trigger
+AFTER DELETE ON Redeems
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION delete_redeems_func;
+
