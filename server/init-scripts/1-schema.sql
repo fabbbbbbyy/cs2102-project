@@ -990,7 +990,7 @@ BEGIN
     IF is_session_redeemed_already THEN
         RAISE EXCEPTION 'Course offering session is already redeemed.';
     ELSIF is_conflicting_with_another_registered_session THEN
-        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registerd course offering session';
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registered course offering session';
     ELSIF is_conflicting_with_another_redeemed_session THEN
         RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another redeemed course offering sessions';
     ELSE
