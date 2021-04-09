@@ -1421,11 +1421,16 @@ BEGIN
     HAVING COUNT(*) >= 2),
   Offering_Registrations AS (
     SELECT F.course_id AS course_id, C.launch_date AS launch_date, C.start_date AS start_date,
-	COALESCE(
+	(COALESCE(
 		(SELECT CAST(COUNT(*) AS INTEGER)
 	    FROM Registers R
 	 	WHERE R.course_id = F.course_id AND launch_date = C.launch_date
-	 	GROUP BY F.course_id, C.launch_date), 0) AS num_registrations
+	 	GROUP BY F.course_id, C.launch_date), 0) +
+    COALESCE(
+		(SELECT CAST(COUNT(*) AS INTEGER)
+	    FROM Redeems R
+	 	WHERE R.course_id = F.course_id AND launch_date = C.launch_date
+	 	GROUP BY F.course_id, C.launch_date), 0)) AS num_registrations
     FROM Filtered_Courses F NATURAL JOIN Course_Offerings C NATURAL JOIN Course_Offering_Sessions S
     GROUP BY F.course_id, C.launch_date, C.start_date),
   Latest_Offering_Registrations AS (
