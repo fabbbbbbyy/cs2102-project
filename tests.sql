@@ -342,11 +342,26 @@ SELECT get_my_course_package(11);
 /* Set 1: Verify that the function works in the normal case (Passing) */
 SELECT * FROM get_available_course_offerings();
 
-/* Set 2: Verify that the function gives accurate results when number of sessions registered increases (Insert own data, Passing) */
+/* Set 2: Verify that the function gives accurate results when number of sessions registered increases (Passing) */
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
+
 /* Set 3: Verify that the function gives accurate results when number of sessions registered decreases (Insert own data, Passing) */
-/* Set 4: Verify that the function gives accurate results when number of sessions redeemed increases (Insert own data, Passing) */
+
+/* Set 4: Verify that the function gives accurate results when number of sessions redeemed increases (Passing) */
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-06-01', 10, 9, 3, '2021-04-02');
+
 /* Set 5: Verify that the function gives accurate results when number of sessions redeemed decreases (Insert own data, Passing) */
-/* Set 6: Verify that the function gives accurate results when offerings have remaining seats which decreased 0 (Insert own data, Passing) */
+
+/* Set 6: Verify that the function gives accurate results when offerings have remaining seats which decreased 0 (Passing) */
+/* Add and edit preprocessing data in data.sql */
+INSERT INTO Rooms(seating_capacity, location) values(1, 'NUS');
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 1, 'Ethics', '2021-08-01', 9);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 2, 'Ethics', '2021-08-01', 9);
+INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(12, 39, 3, 'Ethics', '2021-08-01', 9);
+
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 1, '2021-08-01', 9, 1, 1, '2021-04-02');
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(2, '2021-08-02', 2, '2021-08-01', 9);
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-08-01', 9, 3, 1, '2021-04-02');
 
 /* Function (16) get_available_course_sessions (Kevin) */
 
