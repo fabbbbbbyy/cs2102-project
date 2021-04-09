@@ -134,9 +134,26 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (2) remove_employee (Siddarth)*/
-CREATE OR REPLACE PROCEDURE remove_employee(employee_id integer, date_of_departure date)
+CREATE OR REPLACE PROCEDURE remove_employee(employee_id INTEGER, date_of_departure date)
 AS $$
+DECLARE
+  is_not_valid_employee_id BOOLEAN;
+  has_employee_departed_already BOOLEAN;
 BEGIN
+  SELECT COUNT(*) = 0 INTO is_not_valid_employee_id
+  FROM Employees
+  WHERE employee_id = eid;
+
+  SELECT COUNT(*) > 0 INTO has_employee_departed_already
+  FROM Employees
+  WHERE employee_id = eid and depart_date IS NOT NULL;
+
+  IF is_not_valid_employee_id THEN
+    RAISE EXCEPTION 'Employee is an invalid employee';
+  ELSIF has_employee_departed_already THEN
+    RAISE EXCEPTION 'Employee has departed already';
+  END IF;
+
 	Update Employees
   SET depart_date = date_of_departure
   WHERE employee_id = eid;
@@ -147,34 +164,31 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION check_if_invalid_remove_employee()
 RETURNS TRIGGER AS $$
 DECLARE
-  num_of_registration_after_depart_date integer;
-  num_of_courses_session_after_depart_date integer;
-  num_of_course_area_emp_managing integer;
+  num_of_registration_after_depart_date INTEGER;
+  num_of_courses_session_after_depart_date INTEGER;
+  num_of_course_area_emp_managing INTEGER;
 BEGIN
-  SELECT count(distinct (course_id, launch_date)) INTO num_of_registration_after_depart_date
+  /* Find if there is any course offering which the administrator is managing has a registration deadline after the departure date */
+  SELECT COUNT(distinct (course_id, launch_date)) INTO num_of_registration_after_depart_date
   FROM Employees E1 NATURAL JOIN (Administrators A1 INNER JOIN Course_Offerings C1 on A1.eid = C1.admin_eid)
   WHERE E1.eid = NEW.eid and C1.registration_deadline > NEW.depart_date;
   
-  SELECT count(distinct c1.course_id) INTO num_of_courses_session_after_depart_date
+  SELECT COUNT(distinct c1.course_id) INTO num_of_courses_session_after_depart_date
   FROM Conducts C1 NATURAL JOIN Course_Offering_Sessions C2
   WHERE C1.instructor_id = NEW.eid
   and C1.course_id = C2.course_id
   and C2.session_date > NEW.depart_date;
   
   /* Find out if the manager is managing a course area */
-  SELECT count(course_area_name) INTO num_of_course_area_emp_managing
+  SELECT COUNT(course_area_name) INTO num_of_course_area_emp_managing
   FROM Managers m NATURAL JOIN Course_Areas c
   WHERE m.eid = NEW.eid;
   
   IF num_of_registration_after_depart_date > 0 THEN
   	RAISE EXCEPTION 'Employee is an administrator who is handling some course offering where its registration deadline is after employee departure date. Hence employee cannot be removed.';
-  END IF;
-  
-  IF num_of_courses_session_after_depart_date > 0 THEN
+  ELSIF num_of_courses_session_after_depart_date > 0 THEN
   	RAISE EXCEPTION 'Employee is an instructor who is teaching some course session that starts after employee departure date. Hence employee cannot be removed';
-  END IF;
-  
-  IF num_of_course_area_emp_managing > 0 THEN
+  ELSIF num_of_course_area_emp_managing > 0 THEN
   	RAISE EXCEPTION 'Employee is a manager who is managing some area. Hence employee cannot be removed.';
   END IF;
   
@@ -232,12 +246,31 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* Function (6) find_instructors (Siddarth) */
-CREATE OR REPLACE FUNCTION find_instructors(course_identifier integer, new_session_date date, new_session_start_hour integer)
-RETURNS TABLE(eid integer, name text) AS $$
+CREATE OR REPLACE FUNCTION find_instructors(course_identifier INTEGER, new_session_date DATE, new_session_start_hour INTEGER)
+RETURNS TABLE(eid INTEGER, name TEXT) AS $$
 DECLARE
-  session_duration integer;
-  query_course_area_name text;
+  is_not_valid_course_id BOOLEAN;
+  session_duration INTEGER;
+  query_course_area_name TEXT;
 BEGIN
+  SELECT COUNT(*) = 0 INTO is_not_valid_course_id
+  FROM Courses
+  WHERE course_id = course_identifier;
+
+  IF is_not_valid_course_id THEN
+    RAISE EXCEPTION 'Invalid course id';
+  ELSIF new_session_start_hour < 0 THEN
+    RAISE EXCEPTION 'Session start hour cannot be negative';
+  ELSIF new_session_start_hour >= 12 and new_session_start_hour <= 14 THEN
+    RAISE EXCEPTION 'Session cannot be conducted during 12-2PM';
+  ELSIF new_session_start_hour < 9 THEN
+    RAISE EXCEPTION 'Session cannot be conducted before 9AM';
+  ELSIF new_session_start_hour > 18 THEN
+    RAISE EXCEPTION 'Session cannot be conducted after 6PM';
+  ELSIF extract(dow from new_session_date) = 0 or extract(dow from new_session_date) = 6 THEN
+    RAISE EXCEPTION 'Session cannot be conducted on a weekend';
+  END IF;
+
   SELECT duration INTO session_duration
   FROM Courses
   WHERE course_id = course_identifier;
@@ -387,6 +420,7 @@ DECLARE
   r record;
   temprow record;
   _current_date date;
+  i integer;
 BEGIN
   IF end_date > start_date THEN
     RAISE EXCEPTION 'End date should not be earlier than start date.';
@@ -424,7 +458,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (10) add_course_offering (Siddarth) */
+/* Function (10) add_course_offering (Fabian) */
 CREATE TYPE session_info AS (session_date date, session_start_hour integer, room_id integer);
 
 CREATE OR REPLACE PROCEDURE add_course_offering(_course_id integer, _launch_date date, course_fees numeric, 
@@ -469,9 +503,21 @@ BEGIN
         RAISE EXCEPTION 'The admin with the administrator id does not exist in the database.';
     END IF;
 
-    IF is_valid_room_id = FALSE THEN
-        RAISE EXCEPTION 'The room with the room id does not exist in the database.';
-    END IF;
+    FOREACH current_session_info IN ARRAY all_session_info
+    LOOP
+        SELECT COUNT(*) > 0 into is_valid_room_id
+        FROM Rooms 
+        WHERE Rooms.rid = current_session_info.room_id;
+        IF is_valid_room_id = FALSE THEN
+          RAISE EXCEPTION 'The room with the room id does not exist in the database.';
+        END IF;
+        IF current_session_info.session_date < registration_deadline THEN
+          RAISE EXCEPTION 'The session date is earlier than the registration deadline.';
+        END IF;
+        IF current_session_info.session_date < _launch_date THEN
+          RAISE EXCEPTION 'The session date is earlier than the launch date.';
+        END IF;
+    END LOOP;
     
     IF _launch_date < CURRENT_DATE THEN
         RAISE EXCEPTION 'The launch date cannot be before the current date.';
@@ -495,10 +541,10 @@ BEGIN
     FOREACH current_session_info IN ARRAY all_session_info
     LOOP
         IF current_session_info.session_date < earliest_session_date THEN
-            earliest_session_date := all_session_info[i].session_date;
+            earliest_session_date := current_session_info.session_date;
         END IF;
         IF current_session_info.session_date > latest_session_date THEN
-            latest_session_date := all_session_info[i].session_date;
+            latest_session_date := current_session_info.session_date;
         END IF;
     END LOOP;
 
@@ -583,6 +629,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION get_available_course_packages()
 RETURNS TABLE(name TEXT, num_free_registrations INTEGER, sale_end_date DATE, price NUMERIC) AS $$
 BEGIN
+  RETURN QUERY
   SELECT CP.course_package_name, CP.num_free_registrations, CP.sale_end_date, CP.price
   FROM Course_Packages CP
   WHERE CP.sale_start_date <= CURRENT_DATE AND CP.sale_end_date >= CURRENT_DATE;
@@ -614,7 +661,16 @@ CREATE OR REPLACE FUNCTION get_my_course_package(customer_id INTEGER)
 RETURNS JSON AS $$
 DECLARE
   result json;
+  is_not_valid_course_id BOOLEAN;
 BEGIN
+  SELECT COUNT(*) = 0 INTO is_not_valid_course_id 
+  FROM Customers
+  WHERE cust_id = customer_id;
+
+  IF is_not_valid_course_id THEN
+    RAISE EXCEPTION 'Invalid customer id';
+  END IF;
+
   result := (With 
     Active_And_Partially_Actice_Course_Packages AS
     (
@@ -704,6 +760,7 @@ BEGIN
     RAISE EXCEPTION 'Registration deadline for the course is over.';
   END IF;
   
+  RETURN QUERY
   WITH C AS (
     SELECT *
     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Instructors NATURAL JOIN Rooms),
@@ -796,12 +853,21 @@ $$ LANGUAGE plpgsql;
 
 
 /* Function (18) get_my_registrations (Siddarth) */
-CREATE OR REPLACE FUNCTION get_my_registrations(customer_id integer)
-RETURNS TABLE(course_name text, course_fees numeric, session_date date, session_start_hour integer, session_duration integer, instructor_name text) AS $$
+CREATE OR REPLACE FUNCTION get_my_registrations(customer_id INTEGER)
+RETURNS TABLE(course_name TEXT, course_fees NUMERIC, session_date DATE, session_start_hour INTEGER, session_duration INTEGER, instructor_name TEXT) AS $$
 DECLARE
-	current_date date;
+	current_date DATE;
+  is_not_valid_customer_id BOOLEAN;
 BEGIN
 	SELECT CURRENT_DATE INTO current_date;
+
+  SELECT COUNT(*) = 0 INTO is_not_valid_customer_id
+  FROM Customers
+  WHERE cust_id = customer_id;
+
+  IF is_not_valid_customer_id THEN
+    RAISE EXCEPTION 'Invalid customer id';
+  END IF;
   
   return query
   WITH 
@@ -1151,7 +1217,7 @@ cursP CURSOR FOR (
             ON Employees.eid = Instructors.instructor_id
             Natural Join 
             (Conducts Natural Join Course_Offering_Sessions)   
-        WHERE EXTRACT(MONTH FROM join_date) = EXTRACT(MONTH FROM current_date)
+        WHERE EXTRACT(MONTH FROM session_date) = EXTRACT(MONTH FROM current_date)
     )
     SELECT DIT.eid, sum(difference) as total_hours_worked
     FROM Differences_In_Time DIT
@@ -1159,6 +1225,7 @@ cursP CURSOR FOR (
 );
 rP RECORD;
 current_date date;
+_depart_date date;
 first_work_day integer;
 last_work_day integer;
 num_days_of_current_month integer;
@@ -1210,24 +1277,26 @@ INTO last_work_day; /* This gets last day of current month. */
         FETCH cursP INTO rP;
         EXIT WHEN NOT FOUND;
 
-        IF (EXTRACT(MONTH FROM rP.depart_date) < EXTRACT(MONTH FROM current_date)) THEN
-            CONTINUE;
-        END IF;
-
         WITH Differences_In_Time AS (
-            SELECT Employees.eid, employee_name, (end_time_hour - start_time_hour) as difference, hourly_rate
+            SELECT Employees.eid, Employees.depart_date as depart_date, employee_name, (end_time_hour - start_time_hour) as difference, hourly_rate
             FROM (Part_Time_Employees Natural Join Employees) 
                 Inner Join 
                 (Part_Time_Instructors Natural Join Instructors) 
                 ON Employees.eid = Instructors.instructor_id
                 Natural Join 
                 (Conducts Natural Join Course_Offering_Sessions)   
-            WHERE EXTRACT(MONTH FROM join_date) = EXTRACT(MONTH FROM current_date)
+            WHERE EXTRACT(MONTH FROM session_date) = EXTRACT(MONTH FROM current_date)
         )
-        SELECT employee_name, hourly_rate
-        FROM Differences_In_Time 
-        WHERE eid = rP.eid
-        INTO _name, _hourly_rate;
+        SELECT DIT.employee_name, DIT.hourly_rate, DIT.depart_date
+        FROM Differences_In_Time DIT
+        WHERE DIT.eid = rP.eid
+        INTO _name, _hourly_rate, _depart_date;
+
+        IF _depart_date IS NOT NULL THEN 
+          IF (EXTRACT(MONTH FROM _depart_date) < EXTRACT(MONTH FROM current_date)) THEN
+              CONTINUE;
+          END IF;
+        END IF;
 
         eid := rP.eid;
         status := 'Part Time';
@@ -1333,6 +1402,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION popular_courses()
 RETURNS TABLE (course_id INTEGER, course_title TEXT, course_area_name TEXT, num_offerings INTEGER, latest_offering_num_registrations INTEGER) AS $$
 BEGIN
+  RETURN QUERY
   WITH Filtered_Courses AS (
     SELECT C.course_id AS course_id, C.title AS title,
     C.course_area_name AS course_area_name, CAST(COUNT(*) AS INTEGER) AS num_offerings
@@ -1394,6 +1464,9 @@ current_date date;
 current_month integer;
 current_year integer;
 BEGIN
+    IF number_of_months <= 0 THEN 
+      RAISE EXCEPTION 'To view a valid summary report, number of months must be > 1.';
+    END IF;
     SELECT CURRENT_DATE into current_date;
     SELECT EXTRACT(MONTH FROM current_date) into current_month;
     SELECT EXTRACT(YEAR FROM current_date) into current_year;

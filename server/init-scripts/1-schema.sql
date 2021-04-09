@@ -882,14 +882,17 @@ RETURNS TRIGGER AS $$
 DECLARE
 	num_same_course_offering_session_registered INTEGER;
 BEGIN
+  WITH HELPER_TABLE AS (
+    SELECT * 
+    FROM Registers R 
+    WHERE R.cust_id = NEW.cust_id
+    AND R.launch_date = NEW.launch_date
+    AND R.course_id = NEW.course_id
+  )
 	SELECT COUNT(*) into num_same_course_offering_session_registered 
-  FROM Registers R
-  WHERE R.cust_id = NEW.cust_id
-  AND R.sid = NEW.sid
-  AND R.launch_date = NEW.launch_date
-  AND R.course_id = NEW.course_id;
+  FROM HELPER_TABLE;
 
-  IF (num_same_course_offering_session_registered > 0) THEN
+  IF (num_same_course_offering_session_registered > 1) THEN
   	RAISE EXCEPTION 'This customer already has a session with the same course offering registered.';
   ELSE 
   	RETURN NEW;
@@ -897,8 +900,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER customer_one_session_from_same_course_offering_verification
-BEFORE INSERT OR UPDATE ON Registers
+CREATE CONSTRAINT TRIGGER customer_one_session_from_same_course_offering_verification
+AFTER INSERT OR UPDATE ON Registers
+DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION customer_one_session_from_same_course_offering_verification_func();
 
 /* Trigger (23) Ensure register date cannot be later than registration deadline and before launch date of course offering (Siddarth) */
@@ -935,7 +939,7 @@ RETURNS TRIGGER AS $$
 DECLARE
     is_session_redeemed_already BOOLEAN;
     is_conflicting_with_another_registered_session BOOLEAN;
-    is_conflicting_wtih_another_redeemed_session BOOLEAN;
+    is_conflicting_with_another_redeemed_session BOOLEAN;
     course_session_date DATE;
     course_session_duration INTEGER;
     course_session_start_hour INTEGER;
@@ -958,7 +962,7 @@ BEGIN
       Check if there are any redeemed session with the same session date and time range as the new/updated register tuple
       Reason: At any one point of time, the db instance can only show that customer is attending 1 course session at most. 
     */
-    SELECT COUNT(*) > 0 INTO is_conflicting_wtih_another_redeemed_session
+    SELECT COUNT(*) > 0 INTO is_conflicting_with_another_redeemed_session
     FROM Redeems NATURAL JOIN Course_Offering_Sessions
     WHERE cust_id = NEW.cust_id
     and session_date = course_session_date
@@ -989,13 +993,11 @@ BEGIN
     and session_date = course_session_date
     and (int8range(course_session_start_hour, course_session_start_hour + course_session_duration) && int8range(start_time_hour, end_time_hour));
 
-    RAISE NOTICE '%', is_conflicting_with_another_registered_session;
-
     IF is_session_redeemed_already THEN
         RAISE EXCEPTION 'Course offering session is already redeemed.';
     ELSIF is_conflicting_with_another_registered_session THEN
         RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registerd course offering session';
-    ELSIF is_conflicting_wtih_another_redeemed_session THEN
+    ELSIF is_conflicting_with_another_redeemed_session THEN
         RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another redeemed course offering sessions';
     ELSE
         RETURN NEW;
@@ -1323,7 +1325,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER redeems_updates_buys
-BEFORE INSERT OR UPDATE ON Redeems
+BEFORE INSERT ON Redeems
 FOR EACH ROW EXECUTE FUNCTION redeems_updates_buys_func();
 
 /* Trigger (36) Check if there are remaining seats before changing customers' session. - Helper for function 19 (Gerren) */
