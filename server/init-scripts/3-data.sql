@@ -233,6 +233,7 @@ insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(3, '2021-03-01', 13, '2021-04-01', '2021-05-03', 300, '2021-03-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(4, '2021-01-01', 14, '2021-02-01', '2021-03-01', 300, '2021-01-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(5, '2021-02-01', 15, '2021-03-01', '2021-04-01', 300, '2021-02-15', 0, 50);
+insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(5, '2021-02-02', 11, '2021-03-03', '2021-04-01', 300, '2021-02-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(6, '2021-03-01', 16, '2021-04-01', '2021-05-03', 300, '2021-03-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(7, '2021-01-01', 17, '2021-02-01', '2021-03-01', 300, '2021-01-15', 0, 50);
 insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(8, '2021-02-01', 18, '2021-03-01', '2021-04-01', 300, '2021-02-15', 0, 50);
@@ -264,6 +265,10 @@ insert into Rooms(seating_capacity, location) values(25, 'Kevin Mansion');
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-01-01', 1, '2021-02-02', 9, 10);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-01-01', 1, '2021-02-10', 14, 15);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-01-01', 1, '2021-03-15', 14, 15);
+
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-02', 5, '2021-03-04', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-02-02', 5, '2021-03-05', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-02-02', 5, '2021-03-09', 9, 10);
 
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-02-01', 2, '2021-03-04', 9, 11);
 insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-02-01', 2, '2021-03-15', 14, 16);
@@ -361,6 +366,10 @@ insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, cou
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(5, 7, 2, 'Programming Languages', '2021-02-01', 5);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(5, 7, 3, 'Programming Languages', '2021-02-01', 5);
 
+insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(5, 7, 1, 'Programming Languages', '2021-02-02', 5);
+insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(5, 7, 2, 'Programming Languages', '2021-02-02', 5);
+insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(5, 7, 3, 'Programming Languages', '2021-02-02', 5);
+
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(6, 40, 1, 'Software Engineering', '2021-03-01', 6);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(6, 40, 2, 'Software Engineering', '2021-03-01', 6);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(6, 40, 3, 'Software Engineering', '2021-03-01', 6);
@@ -432,6 +441,9 @@ insert into Registers(cust_id, register_date, sid, launch_date, course_id) value
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-06-02', 1, '2021-06-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-02-10', 2, '2021-02-01', 2);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-02-03', 1, '2021-02-02', 5);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-02-03', 1, '2021-02-02', 5);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-02-03', 1, '2021-02-02', 5);
 
 insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(1, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
 insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(2, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
