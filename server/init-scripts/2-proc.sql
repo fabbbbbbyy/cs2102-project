@@ -422,7 +422,7 @@ DECLARE
   _current_date date;
   i integer;
 BEGIN
-  IF end_date > start_date THEN
+  IF end_date < start_date THEN
     RAISE EXCEPTION 'End date should not be earlier than start date.';
   END IF;
   _current_date := start_date;
@@ -1614,7 +1614,7 @@ With
 	),
 	Manager_Course_Offering_Details_Including_Top_Course_Offering AS
 	(
-		SELECT eid, employee_name, count(distinct course_area_name) as num_of_course_areas_managed, count(distinct(course_id + launch_date)) as num_of_course_offerings_managed
+		SELECT eid, employee_name, count(distinct course_area_name) as num_of_course_areas_managed, count(course_id) as num_of_course_offerings_managed
 		FROM Managers NATURAL JOIN Employees NATURAL LEFT OUTER JOIN Course_Areas NATURAL LEFT OUTER JOIN Courses NATURAL LEFT OUTER JOIN Course_Offerings
 		GROUP BY eid, employee_name
 	)
