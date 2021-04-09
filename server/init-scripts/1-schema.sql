@@ -311,7 +311,7 @@ BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION course_offering_timeslot_verification_func();
 
 /* Trigger (2) Start date, end date, and seating capacity of a course offering is determined by its sessions (Gerren, Kevin) */
-CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_func() 
+CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_seating_capacity_func() 
 RETURNS TRIGGER AS $$
 DECLARE
   earliest_session_date DATE;
@@ -346,9 +346,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER set_course_offering_start_end_date
+CREATE TRIGGER set_course_offering_start_end_date_seating_capacity
 AFTER INSERT OR DELETE OR UPDATE ON Conducts
-FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_func();
+FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_seating_capacity_func();
 
 /* Trigger (4) Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated (Kevin) */
 CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
@@ -1234,6 +1234,27 @@ FOR EACH ROW EXECUTE FUNCTION check_pay_slip_corresponds_to_part_time_emp();
 
 /* Trigger (32) Check if Course_Offerings has at least 1 Course_Offering_Sessions. Deferrable initially deferred. 
 Prevent from just inserting into Course_Offering. (After) (Kevin) */
+CREATE OR REPLACE FUNCTION course_offering_at_least_one_session_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  has_sessions BOOLEAN;
+BEGIN
+  SELECT COUNT(*) > 0 INTO has_sessions
+  FROM Course_Offering_Sessions
+  WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date;
+
+  IF has_sessions = FALSE THEN
+    RAISE EXCEPTION 'Course offerings must have at least one session';
+  END IF;
+
+  RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER course_offering_at_least_one_session
+AFTER INSERT OR UPDATE ON Course_Offerings
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION course_offering_at_least_one_session_func();
 
 /* Trigger (33) Check if cust_id has a session with sid, launch_date, course_id in Registers or Redeems.
     (Trigger on insertion or update of Cancels table) (Gerren) */

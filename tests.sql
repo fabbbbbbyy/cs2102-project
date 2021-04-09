@@ -387,9 +387,14 @@ INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, packa
 SELECT get_available_course_sessions(10, '2021-06-01');
 
 /* Set 2: Verify that the function excludes sessions with no seats left (insert own data) (Passing) */
-SELECT get_available_course_sessions(10, '2021-06-01');
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(1, '2021-08-02', 3, '2021-08-01', 9);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(2, '2021-08-02', 3, '2021-08-01', 9);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(3, '2021-08-02', 3, '2021-08-01', 9);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(4, '2021-08-02', 3, '2021-08-01', 9);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(5, '2021-08-02', 3, '2021-08-01', 9);
+SELECT get_available_course_sessions(9, '2021-08-01');
 
-/* Set 3: Verify that the function excludes sessions which have dates earlier than the current date (Passing) */
+/* Set 3: Verify that the function throws an exception if the registration deadline is over (Passing) */
 SELECT get_available_course_sessions(1, '2021-01-01');
 
 /* Function (17) register_session (Fabian) */
