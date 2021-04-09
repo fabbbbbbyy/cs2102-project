@@ -990,7 +990,7 @@ BEGIN
     IF is_session_redeemed_already THEN
         RAISE EXCEPTION 'Course offering session is already redeemed.';
     ELSIF is_conflicting_with_another_registered_session THEN
-        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registerd course offering session';
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registered course offering session';
     ELSIF is_conflicting_with_another_redeemed_session THEN
         RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another redeemed course offering sessions';
     ELSE
@@ -1689,13 +1689,15 @@ BEGIN
     IF _session_date < current_date THEN
       RAISE EXCEPTION 'The redeemed session has already been attended and cannot be deleted from the records.';
     END IF;
+
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE CONSTRAINT TRIGGER delete_redeems_trigger
 AFTER DELETE ON Redeems
 DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION delete_redeems_func;
+FOR EACH ROW EXECUTE FUNCTION delete_redeems_func();
 
 CREATE OR REPLACE FUNCTION delete_buys_func()
 RETURNS TRIGGER AS $$
@@ -1712,13 +1714,15 @@ BEGIN
   IF has_redeemed = TRUE THEN
     RAISE EXCEPTION 'This customer has already redeemed a session with his package, thus we cannot delete this record.';
   END IF;
+
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE CONSTRAINT TRIGGER delete_buys_trigger
 AFTER DELETE ON Buys
 DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION delete_buys_func;
+FOR EACH ROW EXECUTE FUNCTION delete_buys_func();
 
 CREATE OR REPLACE FUNCTION delete_registers_func()
 RETURNS TRIGGER AS $$
@@ -1735,10 +1739,12 @@ BEGIN
   IF _session_date < current_date THEN
     RAISE EXCEPTION 'The registered session has already been attended and cannot be deleted from the records.';
   END IF;
+
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE CONSTRAINT TRIGGER delete_registers_trigger
 AFTER DELETE ON Registers
 DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION delete_registers_func;
+FOR EACH ROW EXECUTE FUNCTION delete_registers_func();
