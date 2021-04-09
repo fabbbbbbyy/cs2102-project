@@ -1337,14 +1337,16 @@ BEGIN
       SELECT cust_id
       FROM Registers NATURAL JOIN Customers
       GROUP BY cust_id
-      HAVING EXTRACT(year from AGE(current_date, max(register_date))) * 12 + EXTRACT(month from AGE(current_date, max(register_date))) + 1 > 6
+      HAVING max(register_date) <= current_date 
+      and EXTRACT(year from AGE(current_date, max(register_date))) * 12 + EXTRACT(month from AGE(current_date, max(register_date))) + 1 > 6
 
       UNION
 
       SELECT cust_id
       FROM Redeems NATURAL JOIN Customers
       GROUP BY cust_id
-      HAVING EXTRACT(year from AGE(current_date, max(redemption_date))) * 12 + EXTRACT(month from AGE(current_date, max(redemption_date))) + 1 > 6
+      HAVING max(redemption_date) <= current_date 
+      and EXTRACT(year from AGE(current_date, max(redemption_date))) * 12 + EXTRACT(month from AGE(current_date, max(redemption_date))) + 1 > 6
 
     ),
   Recent_Course_Areas_Registered AS
@@ -1364,8 +1366,15 @@ BEGIN
 
     EXCEPT
 
-    SELECT cust_id, name
-    FROM Registers NATURAL JOIN Customers
+    (
+      SELECT cust_id, name
+      FROM Registers NATURAL JOIN Customers
+
+      UNION 
+
+      SELECT cust_id, name
+      FROM Redeems NATURAL JOIN Customers
+    )
   ),
   Promoted_Courses AS (
     SELECT C1.cust_id as customer_id, C1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees
