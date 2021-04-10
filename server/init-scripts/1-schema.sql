@@ -1579,7 +1579,7 @@ CREATE TRIGGER verify_registration_date_valid
 BEFORE INSERT OR UPDATE ON Redeems
 FOR EACH ROW EXECUTE FUNCTION ensure_redemption_date_constraints();
 
-/* Trigger (53) Automatically adds Employee_Pay_Slips data for Part Time Employees. */
+/* Trigger (42) Automatically adds Employee_Pay_Slips data for Part Time Employees. */
 CREATE OR REPLACE FUNCTION add_part_time_employee_pay_slips_func()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -1657,7 +1657,7 @@ AFTER INSERT ON Part_Time_Employees
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION add_part_time_employee_pay_slips_func();
 
-/* Trigger (54) Automatically adds Employee_Pay_Slips data for Full Time Employees. */
+/* Trigger (43) Automatically adds Employee_Pay_Slips data for Full Time Employees. */
 CREATE OR REPLACE FUNCTION add_full_time_employee_pay_slips_func()
 RETURNS TRIGGER AS $$
 DECLARE
