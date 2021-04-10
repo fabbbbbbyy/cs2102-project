@@ -12,7 +12,6 @@ drop table if exists Course_Packages, Credit_Cards, Customers, Employees, Employ
   
 set timezone = 'Asia/Singapore';
 
-/* (CORRECT) */
 create table Course_Packages (
     package_id serial primary key,
     course_package_name text not null,
@@ -24,12 +23,10 @@ create table Course_Packages (
   	CONSTRAINT sale_start_before_end check(sale_end_date >= sale_start_date)
 );
 
-/* (CORRECT) */
 create table Credit_Cards (
   credit_card_num text primary key,
   expiry_date date not null,
   from_date date not null,
-  /* CVV must be three digit, integer might not be able to save 089 */
   cvv text not null,
   
   CONSTRAINT does_not_expire_before_from_date check(expiry_date >= from_date),
@@ -38,35 +35,27 @@ create table Credit_Cards (
   check(cvv similar to '[0-9]{3}')
 );
 
-/* (CORRECT) */
-/* Application specs and functions 3 and 4 seem to imply a one-to-one relationship */
 create table Customers (
   cust_id serial primary key,
   address text,
-  /* The customer, at bare minimum, should have at least name and credit card num provided */
   name text not null,
   email text,
-  /* Assume that user is from Singapore, starting digit must be 6, 8, 9, 8 digit number, check in range*/
   phone_num integer,
   credit_card_num text unique not null references Credit_Cards on update cascade deferrable initially deferred
 );
 
-/* (CORRECT) */
 create table Employees (
   	eid serial primary key,
     address text,
     depart_date date,
     email text,
     join_date date not null,
-    /* The employee, at bare minimum, should have at least name and join date provided */
     employee_name text not null,
-    /* Assume that user is from Singapore, starting digit must be 6, 8, 9, 8 digit number, check in range*/
     phone_num text,
   
   	CONSTRAINT employee_joins_before_departing check(depart_date >= join_date)
 );
 
-/* (CORRECT) */
 create table Employee_Pay_Slips (
     amount numeric not null check(amount > 0), 
     eid integer,
@@ -78,8 +67,6 @@ create table Employee_Pay_Slips (
         on delete cascade
 ); 
 
-/* (CORRECT) */
-/* hourly_rate not null because any row in Part_Time_Employees must exist */
 create table Part_Time_Employees (
     eid integer primary key references Employees
         on delete cascade,
@@ -87,8 +74,6 @@ create table Part_Time_Employees (
     hourly_rate numeric not null check(hourly_rate >= 0)
 );
 
-/* (CORRECT) */
-/* monthly_salary not null because any row in Full_Time_Employees must exist */
 create table Full_Time_Employees (
     eid integer primary key references Employees
         on delete cascade,
@@ -96,37 +81,28 @@ create table Full_Time_Employees (
     monthly_salary numeric not null check(monthly_salary >= 0)
 );
 
-/* (CORRECT) */
-/* Administrator is a full time emp*/
 create table Administrators (
   eid integer primary key references Full_Time_Employees
       on delete cascade
 );
 
-/* (CORRECT) */
-/* Manager is a full time emp*/
 create table Managers (
   eid integer primary key references Full_Time_Employees
       on delete cascade
 );
 
-/* (CORRECT) */
 create table Course_Areas (
     eid integer not null references Managers,
     course_area_name text primary key
 );
 
-/* (CORRECT) */
-/*Instructor is a employee*/
 create table Instructors (
     instructor_id integer references Employees
   			on delete cascade,
-   /* Specialize relationship */
     course_area_name text references Course_Areas, 
     primary key(instructor_id, course_area_name)
 );
 
-/* (CORRECT) */
 create table Part_Time_Instructors (
   instructor_id integer references Part_Time_Employees
       on delete cascade,
@@ -136,7 +112,6 @@ create table Part_Time_Instructors (
   primary key(instructor_id, course_area_name)
 );
 
-/* (CORRECT) */
 create table Full_Time_Instructors (
   instructor_id integer references Full_Time_Employees
       on delete cascade,
@@ -146,7 +121,6 @@ create table Full_Time_Instructors (
   primary key(instructor_id, course_area_name)
 );
 
-/* (CORRECT) */
 create table Courses (
     course_id serial primary key,
     description text not null,
@@ -157,15 +131,12 @@ create table Courses (
     check(duration in (1, 2, 3, 4))  
 );
 
-/* (CORRECT) */
-/*encapsulates Handles weak entity and Has relationship*/
 create table Course_Offerings (
     course_id integer references Courses
   		on delete cascade,
     launch_date date,
     admin_eid integer not null references Administrators
         on delete cascade,
-  	/* start_date and end_date can be null when there are no sessions initially */
   	start_date date,
     end_date date,
     fees numeric not null check (fees > 0.0),
@@ -179,14 +150,12 @@ create table Course_Offerings (
     CONSTRAINT offering_date_starts_after_launch check(start_date >= launch_date)
 );
 
-/* (CORRECT) */
 create table Rooms (
     rid serial primary key,
     seating_capacity integer not null check(seating_capacity > 0),
     location text not null
 );
 
-/* (CORRECT) */
 create table Course_Offering_Sessions (
     sid integer not null,
     launch_date date not null,
@@ -202,7 +171,6 @@ create table Course_Offering_Sessions (
   	CONSTRAINT session_time_starts_before_end check(end_time_hour > start_time_hour)
 );
 
-/* (CORRECT) */
 create table Conducts (
     rid integer references Rooms
         on delete cascade,
@@ -218,7 +186,6 @@ create table Conducts (
         on delete cascade
 );
 
-/* (CORRECT) */
 create table Cancels (
     cust_id integer references Customers
       on delete cascade,
@@ -226,14 +193,13 @@ create table Cancels (
     sid integer,
     launch_date date,
   	course_id integer,
-    package_credit integer, /* might be null to check for cancellation type */
-    refund_amt numeric, /* might be null to check for cancellation type */
+    package_credit integer,
+    refund_amt numeric,
     primary key(cust_id, cancel_date, sid, launch_date, course_id),
     foreign key(sid, launch_date, course_id) references Course_Offering_Sessions
   			on delete cascade
 );
 
-/* (CORRECT) */
 create table Registers (
     cust_id integer references Customers
     		on delete cascade,
@@ -248,8 +214,6 @@ create table Registers (
     CONSTRAINT register_date_before_launch_date check(register_date >= launch_date)
 );
 
-/* (CORRECT) */
-/* num_remaining_redemptions not null because any transaction in Buys has already occurred */
 create table Buys (
     cust_id integer references Customers
       on delete cascade,
@@ -260,7 +224,6 @@ create table Buys (
     primary key(cust_id, package_id, purchase_date)
 );
 
-/* (CORRECT) */
 create table Redeems (
     redemption_date date,
     sid integer,
@@ -281,7 +244,7 @@ create table Redeems (
 
 /* SQL commands to create application triggers */
 
-/* Trigger (1) No two sessions for the same course offering can be conducted on the same day and same time (Gerren) */
+/* Trigger (1) No two sessions for the same course offering can be conducted on the same day and same time */
 CREATE OR REPLACE FUNCTION course_offering_timeslot_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -304,13 +267,13 @@ CREATE TRIGGER course_offering_timeslot_verification
 BEFORE INSERT OR UPDATE ON Course_Offering_Sessions
 FOR EACH ROW EXECUTE FUNCTION course_offering_timeslot_verification_func();
 
-/* Trigger (2) Start date, end date, and seating capacity of a course offering is determined by its sessions (Gerren, Kevin) */
+/* Trigger (2) Start date, end date, and seating capacity of a course offering is determined by its sessions */
 CREATE OR REPLACE FUNCTION set_course_offering_start_end_date_seating_capacity_func() 
 RETURNS TRIGGER AS $$
 DECLARE
   earliest_session_date DATE;
   latest_session_date DATE;
-  updated_offering_seating_capacity INTEGER; /* Added */
+  updated_offering_seating_capacity INTEGER;
 BEGIN
   IF (TG_OP = 'DELETE') THEN
     SELECT COALESCE(CAST(SUM(seating_capacity) AS INTEGER), 0) INTO updated_offering_seating_capacity
@@ -344,7 +307,7 @@ CREATE TRIGGER set_course_offering_start_end_date_seating_capacity
 AFTER INSERT OR DELETE OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION set_course_offering_start_end_date_seating_capacity_func();
 
-/* Trigger (4) Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated (Kevin) */
+/* Trigger (3) Verify that seating capacity is equal to sum of all sessions every time Course_Offerings is inserted/updated */
 CREATE OR REPLACE FUNCTION verify_course_offering_seating_capacity_func()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -368,7 +331,7 @@ CREATE TRIGGER verify_course_offering_seating_capacity
 BEFORE INSERT OR UPDATE ON Course_Offerings
 FOR EACH ROW EXECUTE FUNCTION verify_course_offering_seating_capacity_func();
 
-/* Trigger (5) Each customer can have at most one active or partially active package (Fabian) */
+/* Trigger (4) Each customer can have at most one active or partially active package */
 CREATE OR REPLACE FUNCTION customer_one_package_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -406,7 +369,7 @@ CREATE TRIGGER customer_one_package_verification
 BEFORE INSERT ON Buys
 FOR EACH ROW EXECUTE FUNCTION customer_one_package_verification_func();
 
-/* Trigger (7) Each room can be used to conduct at most one session at any time (Gerren) */
+/* Trigger (5) Each room can be used to conduct at most one session at any time */
 CREATE OR REPLACE FUNCTION room_overlapping_conduct_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -441,7 +404,7 @@ CREATE TRIGGER room_overlapping_conduct_verification
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION room_overlapping_conduct_verification_func();
 
-/* Trigger (8) Employee can be either a full_time or part_time employee but not both (Fabian) */
+/* Trigger (6) Employee can be either a full_time or part_time employee but not both */
 CREATE OR REPLACE FUNCTION part_time_employee_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -484,7 +447,7 @@ CREATE TRIGGER full_time_employee_verification
 BEFORE INSERT OR UPDATE ON Full_Time_Employees
 FOR EACH ROW EXECUTE FUNCTION full_time_employee_verification_func();
 
-/* Trigger (9) A full time employee MUST either be a manager or an admin but not both (Fabian) */
+/* Trigger (7) A full time employee MUST either be a manager or an admin but not both */
 CREATE OR REPLACE FUNCTION manager_employee_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -571,7 +534,7 @@ CREATE TRIGGER instructor_employee_verification
 BEFORE INSERT OR UPDATE ON Instructors
 FOR EACH ROW EXECUTE FUNCTION instructor_employee_verification_func();
 
-/* Trigger (11) (Siddarth) */
+/* Trigger (8) Check that a part-time instructor is not already a full-time instructor */
 CREATE OR REPLACE FUNCTION check_instructor_is_not_full_time_instructor()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -615,7 +578,7 @@ CREATE TRIGGER check_instructor_is_not_part_time_instructor_trigger
 BEFORE INSERT OR UPDATE ON Full_Time_Instructors
 FOR EACH ROW EXECUTE FUNCTION check_instructor_is_not_part_time_instructor();
 
-/* Trigger (12) Instructor assigned to teach a course session must be specialised in that course area (Siddarth) */
+/* Trigger (9) Instructor assigned to teach a course session must be specialised in that course area */
 CREATE OR REPLACE FUNCTION check_instructor_teaches_a_course_session_they_specialise_in()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -637,7 +600,7 @@ CREATE TRIGGER instructor_specialize_in_course_area_of_course_session_trigger
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION check_instructor_teaches_a_course_session_they_specialise_in();
 
-/* Trigger (13) Each instructor can teach at most one course session at any hour (Siddarth) */
+/* Trigger (10) Each instructor can teach at most one course session at any hour */
 CREATE OR REPLACE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -681,7 +644,7 @@ CREATE TRIGGER instructor_cannot_teach_more_than_one_course_session_at_any_hour_
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION ensure_instructor_teaches_at_most_one_course_session_at_any_hour();
 
-/* Trigger (14) Each instructor must not be assigned to teach two consecutive course sessions, there must be at least a one hour beak between sessions (Fabian) */
+/* Trigger (11) Each instructor must not be assigned to teach two consecutive course sessions, there must be at least a one hour beak between sessions */
 CREATE OR REPLACE FUNCTION instructor_has_break_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -722,7 +685,7 @@ CREATE TRIGGER instructor_has_break_verification
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION instructor_has_break_verification_func();
 
-/* Trigger (15) Each part-time instructor must not teach more than 30 hours each month (Gerren) */
+/* Trigger (12) Each part-time instructor must not teach more than 30 hours each month */
 CREATE OR REPLACE FUNCTION part_time_instructor_conduct_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
@@ -750,15 +713,7 @@ CREATE TRIGGER part_time_instructor_conduct_verification
 BEFORE INSERT OR UPDATE ON Conducts
 FOR EACH ROW EXECUTE FUNCTION part_time_instructor_conduct_verification_func();
 
-/* Trigger (17) Check ensure that start_time, duration and end_time follow time constraints (Siddarth) */
-
-/* Trigger (18) If sid in cancels is in redeems --> redeem_amt is null and package_credit > 0
-If sid is cancels in in buys --> redeem_amt is > 0 and package_credit is null (Kevin) */
-
-/* (CORRECT) */
-/* num_remaining_redemptions not null because any transaction in Buys has already occurred */
-
-/* Trigger (20) Every course_offering_session needs to exist in conducts relation (Siddarth)*/
+/* Trigger (13) Every course_offering_session needs to exist in conducts relation */
 CREATE OR REPLACE FUNCTION check_all_course_offering_session_is_being_conducted()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -792,7 +747,7 @@ AFTER INSERT OR UPDATE ON Course_Offering_Sessions
 DEFERRABLE INITIAlLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION check_all_course_offering_session_is_being_conducted();
 
-/* Trigger (21) Trigger that ensures every credit card references at least one customer (Gerren) */
+/* Trigger (14) Trigger that ensures every credit card references at least one customer */
 CREATE OR REPLACE FUNCTION credit_card_verification_func() 
 RETURNS TRIGGER AS $$
 DECLARE
