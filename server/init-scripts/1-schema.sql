@@ -1163,6 +1163,7 @@ BEGIN
             RETURN NEW;
         END IF;
     END IF;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1636,3 +1637,156 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER verify_registration_date_valid
 BEFORE INSERT OR UPDATE ON Redeems
 FOR EACH ROW EXECUTE FUNCTION ensure_redemption_date_constraints();
+
+/* Trigger (53) Automatically adds Employee_Pay_Slips data for Part Time Employees. */
+CREATE OR REPLACE FUNCTION add_part_time_employee_pay_slips_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  _has_already_been_paid_for_this_month boolean;
+  _previous_date date;
+  _previous_month integer;
+  _hourly_rate integer;
+  _total_hours_worked integer;
+  _salary_amount_paid integer;
+  _last_date_of_previous_month date;
+  _join_date date;
+BEGIN
+  _previous_date := current_date - interval '1 month';
+
+  SELECT join_date 
+  FROM Employees Natural Join Part_Time_Employees
+  WHERE Employees.eid = NEW.eid
+  INTO _join_date;
+
+  LOOP 
+    EXIT WHEN _previous_date < _join_date;
+    SELECT EXTRACT(MONTH FROM _previous_date) into _previous_month;
+    SELECT date_trunc('month', _previous_date) + interval '1 month - 1 day' into _last_date_of_previous_month;
+
+    SELECT COUNT(*) > 0
+    FROM Employee_Pay_Slips E
+    WHERE E.eid = NEW.eid
+    AND EXTRACT(MONTH FROM E.payment_date) = _previous_month
+    INTO _has_already_been_paid_for_this_month;
+
+    IF _has_already_been_paid_for_this_month = FALSE THEN
+      WITH Differences_In_Time AS (
+        SELECT (end_time_hour - start_time_hour) as difference
+        FROM (Part_Time_Employees Natural Join Employees) 
+            Inner Join 
+            (Part_Time_Instructors Natural Join Instructors) 
+            ON Employees.eid = Instructors.instructor_id
+            Natural Join 
+            (Conducts Natural Join Course_Offering_Sessions)   
+        WHERE EXTRACT(MONTH FROM session_date) = _previous_month
+        AND Employees.eid = NEW.eid
+      )
+      SELECT sum(difference)
+      FROM Differences_In_Time DIT
+      INTO _total_hours_worked;
+
+      IF _total_hours_worked IS NULL OR _total_hours_worked = 0 THEN
+        _previous_date := _previous_date - interval '1 month';
+        CONTINUE;
+      END IF;
+
+      SELECT hourly_rate
+      FROM (Part_Time_Employees Natural Join Employees) 
+          Inner Join 
+          (Part_Time_Instructors Natural Join Instructors) 
+          ON Employees.eid = Instructors.instructor_id
+      WHERE Employees.eid = NEW.eid
+      INTO _hourly_rate;
+
+      _salary_amount_paid := _hourly_rate * _total_hours_worked;
+
+      INSERT INTO Employee_Pay_Slips
+        VALUES (_salary_amount_paid, NEW.eid, null, _total_hours_worked, _last_date_of_previous_month);
+    END IF;
+
+    _previous_date := _previous_date - interval '1 month';
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER add_part_time_employee_pay_slips_trigger
+AFTER INSERT ON Part_Time_Employees
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION add_part_time_employee_pay_slips_func();
+
+/* Trigger (54) Automatically adds Employee_Pay_Slips data for Full Time Employees. */
+CREATE OR REPLACE FUNCTION add_full_time_employee_pay_slips_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  _has_already_been_paid_for_this_month boolean;
+  _previous_date date;
+  _previous_month integer;
+  _first_work_day integer;
+  _last_work_day integer;
+  _monthly_salary integer;
+  _total_work_days integer;
+  _salary_amount_paid integer;
+  _num_days_of_current_month integer;
+  _last_date_of_previous_month date;
+  _join_date date;
+BEGIN
+  _previous_date := current_date - interval '1 month';
+
+  SELECT join_date 
+  FROM Employees Natural Join Full_Time_Employees
+  WHERE Employees.eid = NEW.eid
+  INTO _join_date;
+
+  LOOP 
+    EXIT WHEN _previous_date < _join_date;
+    SELECT EXTRACT(MONTH FROM _previous_date) into _previous_month;
+    SELECT date_trunc('month', _previous_date) + interval '1 month - 1 day' into _last_date_of_previous_month;
+
+    SELECT COUNT(*) > 0
+    FROM Employee_Pay_Slips E
+    WHERE E.eid = NEW.eid
+    AND EXTRACT(MONTH FROM E.payment_date) = _previous_month
+    INTO _has_already_been_paid_for_this_month;
+
+    IF _has_already_been_paid_for_this_month = FALSE THEN
+      IF (EXTRACT(MONTH FROM _join_date) = EXTRACT(MONTH FROM _previous_date)) THEN
+            SELECT EXTRACT(DAY FROM _join_date) into _first_work_day;
+      ELSE
+          _first_work_day := 1;
+      END IF;
+      SELECT EXTRACT(DAY FROM(date_trunc('month', _previous_date::date) + interval '1 month' - interval '1 day')::date)
+INTO _last_work_day; /* This gets last day of current month. */
+
+      _total_work_days := _last_work_day - _first_work_day + 1;
+
+      SELECT monthly_salary
+      FROM Full_Time_Employees Natural Join Employees
+      WHERE Employees.eid = NEW.eid
+      INTO _monthly_salary;
+
+      SELECT  
+        DATE_PART('days', 
+            DATE_TRUNC('month', _previous_date) 
+            + '1 MONTH'::INTERVAL 
+            - '1 DAY'::INTERVAL
+        ) into _num_days_of_current_month;
+
+      _salary_amount_paid := _monthly_salary * (_num_days_of_current_month/_total_work_days);
+
+      INSERT INTO Employee_Pay_Slips
+        VALUES (_salary_amount_paid, NEW.eid, _total_work_days, null, _last_date_of_previous_month);
+    END IF;
+
+    _previous_date := _previous_date - interval '1 month';
+  END LOOP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER add_full_time_employee_pay_slips_trigger
+AFTER INSERT ON Full_Time_Employees
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION add_full_time_employee_pay_slips_func();
+
