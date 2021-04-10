@@ -941,6 +941,132 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION update_session_verification_on_registers_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  is_same_session BOOLEAN;
+  old_session_date DATE;
+  new_session_date DATE;
+  remaining_seats INTEGER;
+BEGIN
+	SELECT COUNT(*) = 1 INTO is_same_session
+	FROM Registers
+  WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid AND cust_id = NEW.cust_id;
+
+  IF is_same_session = TRUE THEN
+    RAISE EXCEPTION 'Customer already belongs to this session.';
+  END IF;
+
+  SELECT session_date INTO old_session_date
+  FROM Course_Offering_Sessions
+  WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date AND sid = OLD.sid;
+  
+  IF old_session_date < CURRENT_DATE THEN
+    RAISE EXCEPTION 'Session to be updated has already commenced.';
+  END IF;
+
+  SELECT session_date INTO new_session_date
+  FROM Course_Offering_Sessions
+  WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid;
+
+  IF new_session_date < CURRENT_DATE THEN
+    RAISE EXCEPTION 'New session choice specified has already commenced.';
+  END IF;
+
+  WITH Sessions_Conducts_Rooms AS (
+  	SELECT COALESCE(SUM(Rooms.seating_capacity), 0) AS session_capacity
+    FROM Conducts NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Rooms
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid
+  ),
+  Sessions_Registers AS (
+	SELECT COUNT(*) AS num_registrations
+	FROM Registers NATURAL JOIN Course_Offering_Sessions
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid
+  ),
+  Sessions_Redeems AS (
+	SELECT COUNT(*) AS num_redemptions
+	FROM Redeems NATURAL JOIN Course_Offering_Sessions
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid
+  )
+  SELECT (
+  	(SELECT session_capacity FROM Sessions_Conducts_Rooms) - (SELECT num_registrations FROM Sessions_Registers) - (SELECT num_redemptions FROM Sessions_Redeems)
+  ) INTO remaining_seats;	
+	
+  IF (remaining_seats > 0) THEN
+    RETURN NEW;
+  ELSE
+    RAISE EXCEPTION 'Session requested is fully booked.';
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_session_verification_on_registers
+BEFORE UPDATE ON Registers
+FOR EACH ROW EXECUTE FUNCTION update_session_verification_on_registers_func();
+
+CREATE OR REPLACE FUNCTION update_session_verification_on_redeems_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  is_same_session BOOLEAN;
+  old_session_date DATE;
+  new_session_date DATE;
+  remaining_seats INTEGER;
+BEGIN
+	SELECT COUNT(*) = 1 INTO is_same_session
+	FROM Redeems
+  WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid AND cust_id = NEW.cust_id;
+
+  IF is_same_session = TRUE THEN
+    RAISE EXCEPTION 'Customer already belongs to this session.';
+  END IF;
+
+  SELECT session_date INTO old_session_date
+  FROM Course_Offering_Sessions
+  WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date AND sid = OLD.sid;
+  
+  IF old_session_date < CURRENT_DATE THEN
+    RAISE EXCEPTION 'Session to be updated has already commenced.';
+  END IF;
+
+  SELECT session_date INTO new_session_date
+  FROM Course_Offering_Sessions
+  WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid;
+
+  IF new_session_date < CURRENT_DATE THEN
+    RAISE EXCEPTION 'New session choice specified has already commenced.';
+  END IF;
+
+  WITH Sessions_Conducts_Rooms AS (
+  	SELECT COALESCE(SUM(Rooms.seating_capacity), 0) AS session_capacity
+    FROM Conducts NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Rooms
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid
+  ),
+  Sessions_Registers AS (
+	SELECT COUNT(*) AS num_registrations
+	FROM Registers NATURAL JOIN Course_Offering_Sessions
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid
+  ),
+  Sessions_Redeems AS (
+	SELECT COUNT(*) AS num_redemptions
+	FROM Redeems NATURAL JOIN Course_Offering_Sessions
+    WHERE course_id = NEW.course_id AND launch_date = NEW.launch_date AND sid = NEW.sid
+  )
+  SELECT (
+  	(SELECT session_capacity FROM Sessions_Conducts_Rooms) - (SELECT num_registrations FROM Sessions_Registers) - (SELECT num_redemptions FROM Sessions_Redeems)
+  ) INTO remaining_seats;	
+
+  IF (remaining_seats > 0) THEN
+    RETURN NEW;
+  ELSE
+    RAISE EXCEPTION 'Session requested is fully booked.';
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_session_verification_on_redeems
+BEFORE UPDATE ON Redeems
+FOR EACH ROW EXECUTE FUNCTION update_session_verification_on_redeems_func();
+
 /* Function (20) cancel_registration */
 CREATE OR REPLACE PROCEDURE cancel_registration(customer_id INTEGER, courseId INTEGER, launchDate DATE, sessionNumber INTEGER)
 AS $$
@@ -1208,6 +1334,55 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION remove_session_verification_func() 
+RETURNS TRIGGER AS $$
+DECLARE
+  is_only_session BOOLEAN;
+	session_start_time INTEGER;
+  session_start_date DATE;
+  num_registrations INTEGER;
+  num_redemptions INTEGER;
+BEGIN
+  SELECT COUNT(sid) = 1 INTO is_only_session
+  FROM Course_Offering_Sessions
+  WHERE course_id = OLD.course_id AND launch_date = OLD.launch_date;
+
+  IF is_only_session = TRUE THEN
+  	RAISE EXCEPTION 'Attempting to delete only the session remaining in Course Offering.';
+  END IF;
+
+	SELECT start_time_hour, session_date INTO session_start_time, session_start_date
+  FROM Course_Offering_Sessions
+  WHERE sid = OLD.sid AND course_id = OLD.course_id AND launch_date = OLD.launch_date;
+  
+  SELECT COUNT(*) INTO num_registrations
+  FROM Registers
+  WHERE sid = OLD.sid AND course_id = OLD.course_id AND launch_date = OLD.launch_date;
+
+  SELECT COUNT(*) INTO num_redemptions
+  FROM Redeems
+  WHERE sid = OLD.sid AND course_id = OLD.course_id AND launch_date = OLD.launch_date;
+	
+  IF CURRENT_DATE > session_start_date THEN
+  	RAISE EXCEPTION 'Session has already commenced.';
+  END IF;
+  
+  IF CURRENT_DATE = session_start_date AND extract(hour from now()) >= session_start_time THEN
+  	RAISE EXCEPTION 'Session has already commenced.';
+  END IF;
+  
+  IF num_registrations + num_redemptions > 0 THEN
+    RAISE EXCEPTION 'Session has customers registered.';
+  ELSE
+    RETURN OLD;
+  END IF;	
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER remove_session_verification
+BEFORE DELETE ON Course_Offering_Sessions
+FOR EACH ROW EXECUTE FUNCTION remove_session_verification_func();
 
 /* Function (24) add_session */
 CREATE OR REPLACE PROCEDURE add_session(courseId INTEGER, launchDate DATE, session_number INTEGER, session_date DATE, session_start_hour INTEGER, instructorId INTEGER, room_id INTEGER)

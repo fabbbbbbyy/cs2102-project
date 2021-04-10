@@ -444,9 +444,6 @@ SELECT get_my_registrations(12);
 
 /* Function (19) update_course_session (Gerren) */
 
-/* Pre-processing */
-INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
-
 /* Useful visualisation queries */
 SELECT cust_id, session_date, course_id, launch_date, sid, start_time_hour, end_time_hour
 FROM Redeems NATURAL JOIN Course_Offering_Sessions
@@ -457,7 +454,7 @@ FROM Registers NATURAL JOIN Course_Offering_Sessions
 ORDER BY cust_id, session_date;
 
 /* Set 1: Verify that the function works in the normal case (Passing) */
-CALL update_course_session(8, 2, '2021-07-01', 2);
+CALL update_course_session(8, 5, '2021-07-01', 2);
 CALL update_course_session(8, 1, '2021-06-01', 2);
 
 /* Set 2: Verify that exception is thrown if session to be updated is already over (Passing) */
@@ -553,12 +550,16 @@ CALL update_room(8, '2021-01-01', 1, 1);
 
 /* Function (23) remove_session (Gerren) */
 
-/* Pre-processing */
-INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
+/* Useful visualisation queries */
+SELECT *
+FROM Course_Offering_Sessions
+ORDER BY course_id, launch_date, sid;
 
 /* Set 1: Verify that the function works in the normal case (Passing) */
 CALL remove_session(3, '2021-03-01', 3);
+CALL remove_session(3, '2021-03-01', 2);
 CALL remove_session(3, '2021-08-01', 1);
+CALL remove_session(3, '2021-08-01', 2);
 
 /* Set 2: Verify that exception is thrown when removing a session that has commenced (Passing) */
 CALL remove_session(1, '2021-01-01', 1);
@@ -572,8 +573,12 @@ CALL remove_session(4, '2021-03-01', 3);
 
 /* Set 4: Verify that exception is thrown when removing a session that has at least one registration/redemption (Passing) */
 CALL remove_session(1, '2021-06-01', 1);
-CALL remove_session(10, '2021-06-01', 2);
-CALL remove_session(2, '2021-07-01', 1);
+CALL remove_session(8, '2021-07-01', 3);
+CALL remove_session(1, '2021-06-01', 1);
+
+/* Set 5: Verify that exception is thrown when removing the only session left in Course Offering (Passing) */
+CALL remove_session(3, '2021-03-01', 1);
+CALL remove_session(3, '2021-08-01', 3);
 
 /* Function (24) add_session (Kevin) */
 
