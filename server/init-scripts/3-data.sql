@@ -477,26 +477,26 @@ insert into Buys values(8, 7, '2021-04-02', 7);
 insert into Buys values(9, 3, '2021-04-02', 3);
 insert into Buys values(10, 4, '2021-04-02', 4);
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 1, 1, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-05', 3, '2021-07-01', 8, 1, 1, '2021-04-02');
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 2, 1, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-06', 3, '2021-07-01', 8, 2, 1, '2021-04-02');
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 3, 1, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-05', 3, '2021-07-01', 8, 3, 1, '2021-04-02');
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 4, 1, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-03', 3, '2021-07-01', 8, 4, 1, '2021-04-02');
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 5, 2, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-08', 3, '2021-07-01', 8, 5, 2, '2021-04-02');
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 6, 2, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-11', 3, '2021-07-01', 8, 6, 2, '2021-04-02');
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 7, 2, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-12', 3, '2021-07-01', 8, 7, 2, '2021-04-02');
 
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-06-01', 2, '2021-06-01', 10, 8, 7, '2021-04-02');
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-02', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-10', 1, '2021-08-01', 9, 8, 7, '2021-04-02');
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-06-01', 10, 9, 3, '2021-04-02');
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-07-01', 8, 9, 3, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-06-11', 3, '2021-06-01', 10, 9, 3, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-03', 2, '2021-07-01', 8, 9, 3, '2021-04-02');
 
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-06-02', 1, '2021-06-01', 10, 10, 4, '2021-04-02');
 insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-10', 1, '2021-07-01', 8, 10, 4, '2021-04-02');

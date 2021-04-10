@@ -1393,25 +1393,30 @@ BEGIN
       SELECT cust_id
       FROM Registers NATURAL JOIN Customers
       GROUP BY cust_id
-      HAVING max(register_date) <= current_date 
-      and EXTRACT(year from AGE(current_date, max(register_date))) * 12 + EXTRACT(month from AGE(current_date, max(register_date))) + 1 > 6
+      HAVING EXTRACT(year from AGE(current_date, max(register_date))) * 12 + EXTRACT(month from AGE(current_date, max(register_date))) + 1 > 6
 
       UNION
 
       SELECT cust_id
       FROM Redeems NATURAL JOIN Customers
       GROUP BY cust_id
-      HAVING max(redemption_date) <= current_date 
-      and EXTRACT(year from AGE(current_date, max(redemption_date))) * 12 + EXTRACT(month from AGE(current_date, max(redemption_date))) + 1 > 6
+      HAVING EXTRACT(year from AGE(current_date, max(redemption_date))) * 12 + EXTRACT(month from AGE(current_date, max(redemption_date))) + 1 > 6
 
     ),
+  Top_Course_Areas AS 
+  (
+    SELECT cust_id, register_date as reg_date, C1.course_area_name
+    FROM Inactive_Customers NATURAL JOIN Registers NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses C1
+    UNION
+    SELECT cust_id, redemption_date as reg_date, C2.course_area_name
+    FROM Inactive_Customers NATURAL JOIN Redeems NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses C2
+  ),
   Recent_Course_Areas_Registered AS
   (
   	SELECT distinct *
     FROM (
-      SELECT *,
-      rank() OVER (PARTITION BY cust_id ORDER BY register_date desc)
-      FROM Inactive_Customers NATURAL JOIN Registers NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+      SELECT cust_id, reg_date, T1.course_area_name, rank() OVER (PARTITION BY cust_id ORDER BY reg_date desc)
+      FROM Top_Course_Areas T1
     ) ranked_course_areas
     WHERE rank <= 3
   ),
