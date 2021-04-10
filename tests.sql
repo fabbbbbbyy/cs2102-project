@@ -401,7 +401,7 @@ SELECT get_available_course_sessions(1, '2021-01-01');
 /* Function (17) register_session (Fabian) */
 
 /* Set 1: Register for session with CC normally (Passing) */
-CALL register_session(4, 9, '2021-03-01', 3, 'Credit Card');
+CALL register_session(4, 1, '2021-03-01', 3, 'Credit Card');
 
 /* Set 2: Register for session with CC when customer does not exist (Passing) */
 CALL register_session(2321, 1, '2021-01-01', 1, 'Credit Card');
@@ -415,22 +415,25 @@ CALL register_session(4, 8, '2021-07-01', 53,'Credit Card');
 /* Set 5: Register for session with CC where session_date is before current_date (Passing) */
 CALL register_session(4, 1, '2021-01-01', 1,'Credit Card');
 
-/* Set 6: Register for session with Redemption when customer does not exist (Passing) */
+/* Set 6: Register for session with Redemption normally (Passing) */
+CALL register_session(10, 1, '2021-03-01', 3, 'Redemption');
+
+/* Set 7: Register for session with Redemption when customer does not exist (Passing) */
 CALL register_session(2321, 1, '2021-01-01', 1, 'Redemption');
 
-/* Set 7: Register for session with Redemption when primary key of Course_Offering_Sessions does not exist (Passing) */
+/* Set 8: Register for session with Redemption when primary key of Course_Offering_Sessions does not exist (Passing) */
 CALL register_session(4, 1232, '2021-01-01', 1, 'Redemption');
 
-/* Set 8: Register for session with Redemption where launch_date is after current_date (Passing) */
+/* Set 9: Register for session with Redemption where launch_date is after current_date (Passing) */
 CALL register_session(4, 8, '2021-07-01', 1, 'Redemption');
 
-/* Set 9: Register for session with CC where session_date is before current_date (Passing) */
+/* Set 10: Register for session with CC where session_date is before current_date (Passing) */
 CALL register_session(4, 1, '2021-01-01', 1, 'Redemption');
 
-/* Set 10: Register for session with Redemption when customer has no course packages in Buys (Passing) */
+/* Set 11: Register for session with Redemption when customer has no course packages in Buys (Passing) */
 CALL register_session(10, 9, '2021-03-01', 3, 'Redemption');
 
-/* Set 11: Register for session with Redemption when customer has no more redemptions in Buys (Passing) */
+/* Set 12: Register for session with Redemption when customer has no more redemptions in Buys (Passing) */
 CALL register_session(4, 9, '2021-03-01', 3, 'Redemption');
 CALL register_session(4, 6, '2021-03-01', 2, 'Redemption');
 
