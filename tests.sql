@@ -318,7 +318,7 @@ SELECT get_available_course_packages();
 /* Function (13) buy_course_package (Fabian) */
 
 /* Set 1: Verify that the function works in the normal case (Passing) */
-CALL buy_course_package(10, 1);
+CALL buy_course_package(11, 1);
 
 /* Set 2: Verify that the function throws exception for when customer does not exist and course package exists (Passing) */
 CALL buy_course_package(9999, 1);
@@ -402,6 +402,7 @@ SELECT get_available_course_sessions(1, '2021-01-01');
 
 /* Set 1: Register for session with CC normally (Passing) */
 CALL register_session(4, 1, '2021-03-01', 3, 'Credit Card');
+CALL register_session(10, 1, '2021-03-01', 3, 'Redemption');
 
 /* Set 2: Register for session with CC when customer does not exist (Passing) */
 CALL register_session(2321, 1, '2021-01-01', 1, 'Credit Card');
