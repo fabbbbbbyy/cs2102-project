@@ -515,7 +515,5 @@ CALL cancel_registration(10, 8, '2021-07-01', 1);
 CALL cancel_registration(1, 8, '2021-07-01', 3);
 CALL cancel_registration(6, 8, '2021-07-01', 3);
 CALL cancel_registration(9, 10, '2021-06-01', 3);
-CALL cancel_registration(10, 10, '2021-06-01', 1);
-CALL cancel_registration(10, 9, '2021-08-01', 1);
 
 COMMIT;
