@@ -130,7 +130,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (2) remove_employee (Siddarth)*/
+/* Function (2) remove_employee */
 CREATE OR REPLACE PROCEDURE remove_employee(employee_id INTEGER, date_of_departure date)
 AS $$
 DECLARE
@@ -197,7 +197,7 @@ CREATE TRIGGER check_remove_employee_constraints
 BEFORE INSERT OR UPDATE ON Employees
 FOR EACH ROW EXECUTE FUNCTION check_if_invalid_remove_employee();
 
-/* Function (3) add_customer (Gerren) */
+/* Function (3) add_customer */
 CREATE OR REPLACE PROCEDURE add_customer(name TEXT, home_address TEXT, phone_no INTEGER, email_address TEXT, credit_card_no TEXT,
           expiry_date DATE, CVV_code text)
 AS $$
@@ -209,7 +209,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (4) update_credit_card (Kevin) */
+/* Function (4) update_credit_card */
 CREATE OR REPLACE PROCEDURE update_credit_card(customer_id INTEGER, credit_card_no TEXT, expiration_date DATE, CVV_code TEXT)
 AS $$
 DECLARE
@@ -242,7 +242,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (6) find_instructors (Siddarth) */
+/* Function (6) find_instructors */
 CREATE OR REPLACE FUNCTION find_instructors(course_identifier INTEGER, new_session_date DATE, new_session_start_hour INTEGER)
 RETURNS TABLE(eid INTEGER, name TEXT) AS $$
 DECLARE
@@ -304,7 +304,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (7) get_available_instructors (Gerren) */
+/* Function (7) get_available_instructors */
 CREATE OR REPLACE FUNCTION get_available_instructors(course_identifier INTEGER, start_date DATE, end_date DATE)
 RETURNS TABLE(instructor_identifier INTEGER, instructor_name TEXT, total_teaching_hours INTEGER, day DATE, available_hours INTEGER[]) AS $$
 DECLARE
@@ -372,7 +372,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (8) find_rooms (Kevin) */
+/* Function (8) find_rooms */
 CREATE OR REPLACE FUNCTION find_rooms(date_to_check DATE, session_start_hour INTEGER, session_duration INTEGER)
 RETURNS TABLE(room_id INTEGER) AS $$
 DECLARE
@@ -459,7 +459,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (10) add_course_offering (Fabian) */
+/* Function (10) add_course_offering */
 CREATE TYPE session_info AS (session_date date, session_start_hour integer, room_id integer);
 
 CREATE OR REPLACE PROCEDURE add_course_offering(_course_id integer, _launch_date date, course_fees numeric, 
@@ -617,7 +617,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-/* Function (11) add_course_package (Gerren) */
+/* Function (11) add_course_package */
 CREATE OR REPLACE PROCEDURE add_course_package(package_name TEXT, num_free_course_sessions INTEGER, price NUMERIC, start_date DATE, end_date DATE)
 AS $$
 BEGIN
@@ -626,7 +626,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (12) get_available_course_packages (Kevin) */
+/* Function (12) get_available_course_packages */
 CREATE OR REPLACE FUNCTION get_available_course_packages()
 RETURNS TABLE(name TEXT, num_free_registrations INTEGER, sale_end_date DATE, price NUMERIC) AS $$
 BEGIN
@@ -657,7 +657,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (14) get_my_course_package (Siddarth) */
+/* Function (14) get_my_course_package */
 CREATE OR REPLACE FUNCTION get_my_course_package(customer_id INTEGER)
 RETURNS JSON AS $$
 DECLARE
@@ -711,7 +711,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-/* Function (15) get_available_course_offerings (Gerren) */
+/* Function (15) get_available_course_offerings */
 CREATE OR REPLACE FUNCTION get_available_course_offerings()
 RETURNS TABLE(course_title TEXT, course_area TEXT, start_date DATE, end_date DATE, reg_deadline DATE, course_fees NUMERIC, remaining_seats INTEGER) AS $$
 BEGIN
@@ -749,7 +749,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (16) get_available_course_sessions (Kevin) */
+/* Function (16) get_available_course_sessions */
 CREATE OR REPLACE FUNCTION get_available_course_sessions(courseId INTEGER, launchDate DATE)
 RETURNS TABLE(session_date DATE, start_time INTEGER, name TEXT, number_remaining_seats INTEGER) AS $$
 DECLARE
@@ -855,7 +855,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-/* Function (18) get_my_registrations (Siddarth) */
+/* Function (18) get_my_registrations */
 CREATE OR REPLACE FUNCTION get_my_registrations(customer_id INTEGER)
 RETURNS TABLE(course_name TEXT, course_fees NUMERIC, session_date DATE, session_start_hour INTEGER, session_duration INTEGER, instructor_name TEXT) AS $$
 DECLARE
@@ -875,7 +875,6 @@ BEGIN
   return query
   WITH 
   Customer_Registration_Info AS (
-    /*{course_id, sid, launch_date, session_date, fees, start_time}*/
       SELECT title as course_name, fees as course_fees, C1.session_date, start_time_hour as session_start_hour, duration as session_duration, employee_name as instructor_name
       FROM (Registers R NATURAL JOIN Course_Offering_Sessions C1 NATURAL JOIN Course_Offerings C2 NATURAL JOIN Conducts NATURAL JOIN Courses) INNER JOIN Employees on instructor_id = eid
       WHERE cust_id = customer_id
@@ -894,7 +893,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (19) update_course_session (Gerren) */
+/* Function (19) update_course_session */
 CREATE OR REPLACE PROCEDURE update_course_session(cust_identifer INTEGER, course_identifier INTEGER, course_launch_date DATE, session_num INTEGER)
 AS $$
 DECLARE
@@ -1240,7 +1239,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (22) update_room (Siddarth) */
+/* Function (22) update_room */
 CREATE OR REPLACE PROCEDURE update_room(existing_course_id INTEGER, existing_launch_date DATE, existing_session_id INTEGER, new_room_id INTEGER)
 AS $$
 DECLARE
@@ -1315,7 +1314,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (23) remove_session (Gerren) */
+/* Function (23) remove_session */
 CREATE OR REPLACE PROCEDURE remove_session(course_identifier INTEGER, course_launch_date DATE, session_num INTEGER)
 AS $$
 DECLARE
@@ -1474,7 +1473,9 @@ last_work_day integer;
 num_days_of_current_month integer;
 BEGIN
     SELECT CURRENT_DATE into current_date;
-
+    IF EXTRACT(DAY FROM current_date) <> EXTRACT(DAY FROM(date_trunc('month', current_date::date) + interval '1 month' - interval '1 day')::date) THEN
+      RAISE EXCEPTION 'It is not the last day of the month, so we are unable to pay the Employees yet.';
+    END IF;
     OPEN cursF;
     LOOP
         FETCH cursF INTO rF;
@@ -1557,7 +1558,7 @@ INTO last_work_day; /* This gets last day of current month. */
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (26) promote_courses (Siddarth) */
+/* Function (26) promote_courses */
 CREATE OR REPLACE FUNCTION promote_courses()
 RETURNS TABLE(customer_id integer, customer_name text, course_area_name text, course_id integer, course_title text, launch_date date, registration_deadline date, fees numeric) AS $$
 BEGIN
@@ -1635,7 +1636,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (27) top_packages (Gerren) */
+/* Function (27) top_packages */
 CREATE OR REPLACE FUNCTION top_packages(N INTEGER)
 RETURNS TABLE(package_id INTEGER, num_free_course_sessions INTEGER, package_price NUMERIC, start_date DATE, end_date DATE, num_packages_sold INTEGER) AS $$
 DECLARE
@@ -1663,7 +1664,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (28) popular_courses (Kevin) */
+/* Function (28) popular_courses */
 CREATE OR REPLACE FUNCTION popular_courses()
 RETURNS TABLE (course_id INTEGER, course_title TEXT, course_area_name TEXT, num_offerings INTEGER, latest_offering_num_registrations INTEGER) AS $$
 BEGIN
@@ -1789,7 +1790,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-/* Function (30) view_manager_report (Siddarth) */
+/* Function (30) view_manager_report */
 CREATE OR REPLACE FUNCTION view_manager_report()
 RETURNS TABLE(manager_eid INTEGER, manager_name TEXT, total_num_of_managed_course_areas BIGINT, total_num_of_course_offerings_ended BIGINT, total_net_registration_fees NUMERIC, top_course_offering_title TEXT) AS $$
 DECLARE
@@ -1870,6 +1871,7 @@ With
 	(
 		SELECT eid, employee_name, count(distinct course_area_name) as num_of_course_areas_managed, count(course_id) as num_of_course_offerings_managed
 		FROM Managers NATURAL JOIN Employees NATURAL LEFT OUTER JOIN Course_Areas NATURAL LEFT OUTER JOIN Courses NATURAL LEFT OUTER JOIN Course_Offerings
+    WHERE depart_date IS NULL or (date_part('year', depart_date::timestamp) = date_part('year', now()))
 		GROUP BY eid, employee_name
 	)
 	
