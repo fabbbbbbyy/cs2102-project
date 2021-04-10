@@ -512,7 +512,7 @@ CALL update_course_session(2, 9, '2021-08-01', 1);
 /* Function (20) cancel_registration (Kevin) */
 
 /* Set 1: Verify that the function works in the normal case (Passing) */
-CALL cancel_registration(8, 1, '2021-01-01', 1); /* Cancel from Registers table */
+CALL cancel_registration(4, 1, '2021-06-01', 1); /* Cancel from Registers table */
 CALL cancel_registration(8, 8, '2021-07-01', 3); /* Cancel from Redeems table */
 
 /* Set 2: Verify that the function throws an exception when no such registration exists in Registers or Redeems (Passing) */
