@@ -91,9 +91,6 @@ BEGIN
       RAISE EXCEPTION 'Join date is after the current date.';
     END IF;
     IF (employee_category = 'Manager') THEN
-        IF course_areas = null OR cardinality(course_areas) = 0 THEN
-            RAISE EXCEPTION 'Course areas must be not be empty for a manager.';
-        END IF;
         SELECT add_employee_helper(home_address, contact_number, email_address, join_date, name) into eid;
         CALL add_fulltime_employee_helper(eid, salary_rate);
         CALL add_manager_helper(eid);
@@ -226,12 +223,12 @@ BEGIN
   	RAISE EXCEPTION 'Invalid customer ID.';
   END IF;
 
-  DELETE FROM Credit_Cards WHERE credit_card_num = previous_credit_card_num;
-  INSERT INTO Credit_Cards(credit_card_num, expiry_date, from_date, cvv) VALUES(credit_card_no, expiration_date, CURRENT_DATE, CVV_code);
-
   UPDATE Customers
   SET credit_card_num = credit_card_no
   WHERE cust_id = customer_id;
+  
+  DELETE FROM Credit_Cards WHERE credit_card_num = previous_credit_card_num;
+  INSERT INTO Credit_Cards(credit_card_num, expiry_date, from_date, cvv) VALUES(credit_card_no, expiration_date, CURRENT_DATE, CVV_code);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -770,7 +767,9 @@ BEGIN
     FROM Course_Offering_Sessions NATURAL JOIN Conducts NATURAL JOIN Instructors NATURAL JOIN Rooms),
   Result AS (
 	SELECT C.session_date, C.start_time_hour, (SELECT employee_name FROM Employees WHERE eid = C.instructor_id),
-	  C.seating_capacity - (SELECT CAST(COUNT(*) AS INT) FROM Registers WHERE Registers.sid = C.sid) AS number_remaining_seats
+	  (C.seating_capacity
+        - (SELECT CAST(COUNT(*) AS INT) FROM Registers R WHERE R.sid = C.sid)
+        - (SELECT CAST(COUNT(*) AS INT) FROM Redeems R WHERE R.sid = C.sid)) AS number_remaining_seats
     FROM C
     WHERE C.course_id = courseId AND C.launch_date = launchDate
     GROUP BY C.sid, C.session_date, C.start_time_hour, C.instructor_id, C.seating_capacity)
@@ -995,6 +994,62 @@ BEGIN
   INSERT INTO Cancels(cancel_date, cust_id, launch_date, package_credit, refund_amt, sid, course_id) VALUES(CURRENT_DATE, customer_id, launchDate, package_credit, refund_amt, sessionNumber, courseId);
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION cancels_updates_related_tables_func()
+RETURNS TRIGGER AS $$
+DECLARE
+    is_late_cancellation BOOLEAN;
+    _package_id INTEGER;
+BEGIN
+    IF (NEW.package_credit IS NOT NULL AND NEW.refund_amt IS NOT NULL) OR (NEW.package_credit IS NULL AND NEW.refund_amt IS NULL) THEN
+        RAISE EXCEPTION 'Only one of package credit and refund amount must be null in the Cancels table';
+    END IF;
+
+    SELECT (session_date - NEW.cancel_date) < 7 INTO is_late_cancellation
+    FROM Course_Offering_Sessions
+    WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
+
+    /* Delete from Redeems */
+    /* Change package amount to 0 if < 7 days before, otherwise update Buys if >= 7 days before */
+    IF NEW.package_credit IS NOT NULL THEN
+        /* Can use (sid, launch_date, course_id) (i.e. primary key of Course_Offering_Sessions) to delete from Redeems since
+           a customer can only register for one course at a time */
+        SELECT package_id INTO _package_id
+        FROM Redeems
+        WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
+
+        DELETE
+        FROM Redeems
+        WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id AND package_id = _package_id;
+        
+        IF is_late_cancellation = TRUE THEN
+            NEW.package_credit := 0;
+        END IF;
+
+        UPDATE Buys
+        SET num_remaining_redemptions = num_remaining_redemptions + NEW.package_credit
+        WHERE package_id = _package_id AND cust_id = NEW.cust_id;
+    END IF;
+
+    /* Delete from Registers */
+    /* Change refund amount if < 7 days before */
+    IF NEW.refund_amt IS NOT NULL THEN
+        DELETE
+        FROM Registers
+        WHERE launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
+
+        IF is_late_cancellation = TRUE THEN
+            NEW.refund_amt := 0.0;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER cancels_updates_related_tables
+BEFORE INSERT ON Cancels
+FOR EACH ROW EXECUTE FUNCTION cancels_updates_related_tables_func();
 
 /* Function (21) update_instructor */
 CREATE OR REPLACE PROCEDURE update_instructor(_course_id integer, _launch_date date, session_id integer,
@@ -1339,14 +1394,29 @@ BEGIN
       FROM Registers NATURAL JOIN Customers
       GROUP BY cust_id
       HAVING EXTRACT(year from AGE(current_date, max(register_date))) * 12 + EXTRACT(month from AGE(current_date, max(register_date))) + 1 > 6
+
+      UNION
+
+      SELECT cust_id
+      FROM Redeems NATURAL JOIN Customers
+      GROUP BY cust_id
+      HAVING EXTRACT(year from AGE(current_date, max(redemption_date))) * 12 + EXTRACT(month from AGE(current_date, max(redemption_date))) + 1 > 6
+
     ),
+  Top_Course_Areas AS 
+  (
+    SELECT cust_id, register_date as reg_date, C1.course_area_name
+    FROM Inactive_Customers NATURAL JOIN Registers NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses C1
+    UNION
+    SELECT cust_id, redemption_date as reg_date, C2.course_area_name
+    FROM Inactive_Customers NATURAL JOIN Redeems NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses C2
+  ),
   Recent_Course_Areas_Registered AS
   (
   	SELECT distinct *
     FROM (
-      SELECT *,
-      rank() OVER (PARTITION BY cust_id ORDER BY register_date desc)
-      FROM Inactive_Customers NATURAL JOIN Registers NATURAL JOIN Course_Offering_Sessions NATURAL JOIN Course_Offerings NATURAL JOIN Courses
+      SELECT cust_id, reg_date, T1.course_area_name, rank() OVER (PARTITION BY cust_id ORDER BY reg_date desc)
+      FROM Top_Course_Areas T1
     ) ranked_course_areas
     WHERE rank <= 3
   ),
@@ -1357,8 +1427,15 @@ BEGIN
 
     EXCEPT
 
-    SELECT cust_id, name
-    FROM Registers NATURAL JOIN Customers
+    (
+      SELECT cust_id, name
+      FROM Registers NATURAL JOIN Customers
+
+      UNION 
+
+      SELECT cust_id, name
+      FROM Redeems NATURAL JOIN Customers
+    )
   ),
   Promoted_Courses AS (
     SELECT C1.cust_id as customer_id, C1.name as customer_name, C2.course_area_name, C2.course_id, C2.title as course_title, C2.launch_date, C2.registration_deadline, C2.fees

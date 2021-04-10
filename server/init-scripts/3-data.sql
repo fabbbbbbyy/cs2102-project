@@ -3,6 +3,7 @@ BEGIN TRANSACTION;
 SET CONSTRAINTS check_all_course_offering_session_is_being_conducted_trigger DEFERRED;
 SET CONSTRAINTS ensure_employee_either_part_time_or_full_time_employee DEFERRED;
 SET CONSTRAINTS customer_one_session_from_same_course_offering_verification DEFERRED;
+SET CONSTRAINTS delete_registers_trigger DEFERRED;
 
 call add_customer('Ronaldo', 'Santos Street 5', 99999999, 'ronaldo@hotmail.com', '5500000000000005','2021-10-10', '898');
 call add_customer('Messi', 'Barcelona Road', 99998888, 'leomessi@hotmail.com', '5500000000000006','2021-11-10', '888');
@@ -430,24 +431,40 @@ insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, cou
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 2, 'Calculus', '2021-06-01', 10);
 insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(10, 33, 3, 'Calculus', '2021-06-01', 10);
 
+insert into Course_Offerings(course_id, launch_date, admin_eid, start_date, end_date, fees, registration_deadline, seating_capacity, target_number_registrations) values(1, '2021-03-01', 11, '2021-05-15', '2021-08-02', 450, '2021-05-01', 0, 70);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(1, '2021-03-01', 1, '2021-06-22', 9, 10);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(2, '2021-03-01', 1, '2021-06-23', 14, 15);
+insert into Course_Offering_Sessions(sid, launch_date, course_id, session_date, start_time_hour, end_time_hour) values(3, '2021-03-01', 1, '2021-06-24', 14, 15);
+insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 1, 'Database Systems', '2021-03-01', 1);
+insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 2, 'Database Systems', '2021-03-01', 1);
+insert into Conducts(rid, instructor_id, sid, course_area_name, launch_date, course_id) values(1, 1, 3, 'Database Systems', '2021-03-01', 1);
+
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(1, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(2, '2021-01-02', 1, '2021-01-01', 1);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(3, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(4, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(5, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 1, '2021-01-01', 1);
-insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(4, '2021-01-02', 1, '2021-01-01', 7);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(5, '2021-01-02', 1, '2021-01-01', 7);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-01-02', 1, '2021-01-01', 7);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-01-02', 1, '2021-01-01', 7);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-01-02', 1, '2021-01-01', 10);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-01-02', 1, '2021-01-01', 10);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-02-10', 2, '2021-02-01', 2);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-02-03', 1, '2021-02-02', 5);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-02-03', 1, '2021-02-02', 5);
 insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-02-03', 1, '2021-02-02', 5);
-
-insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(1, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
-insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(2, '2021-01-03', 1, '2021-01-01', 1, NULL, 0.0);
-insert into Cancels(cust_id, cancel_date, sid, launch_date, course_id, package_credit, refund_amt) values(8, '2021-07-02', 1, '2021-06-01', 1, NULL, 0.0);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(1, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(2, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(3, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(4, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(5, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(9, '2021-06-02', 1, '2021-06-01', 1);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-07-10', 2, '2021-07-01', 2);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(6, '2021-07-03', 1, '2021-07-01', 5);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(7, '2021-07-03', 1, '2021-07-01', 5);
+insert into Registers(cust_id, register_date, sid, launch_date, course_id) values(8, '2021-07-03', 1, '2021-07-01', 5);
 
 insert into Buys values(1, 1, '2021-04-02', 1);
 insert into Buys values(2, 1, '2021-04-02', 1);
@@ -460,8 +477,43 @@ insert into Buys values(8, 7, '2021-04-02', 7);
 insert into Buys values(9, 3, '2021-04-02', 3);
 insert into Buys values(10, 4, '2021-04-02', 4);
 
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-06-01', 10, 8, 7, '2021-04-02');
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
-insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-10', 1, '2021-07-01', 2, 8, 7, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-05', 3, '2021-07-01', 8, 1, 1, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-06', 3, '2021-07-01', 8, 2, 1, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-05', 3, '2021-07-01', 8, 3, 1, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-03', 3, '2021-07-01', 8, 4, 1, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-08', 3, '2021-07-01', 8, 5, 2, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-11', 3, '2021-07-01', 8, 6, 2, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-12', 3, '2021-07-01', 8, 7, 2, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-06-01', 2, '2021-06-01', 10, 8, 7, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-02', 3, '2021-07-01', 8, 8, 7, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-10', 1, '2021-08-01', 9, 8, 7, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-06-11', 3, '2021-06-01', 10, 9, 3, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-03', 2, '2021-07-01', 8, 9, 3, '2021-04-02');
+
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-06-02', 1, '2021-06-01', 10, 10, 4, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-10', 1, '2021-07-01', 8, 10, 4, '2021-04-02');
+insert into Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-10', 1, '2021-08-01', 9, 10, 4, '2021-04-02');
+
+CALL cancel_registration(1, 1, '2021-06-01', 1);
+CALL cancel_registration(2, 1, '2021-06-01', 1);
+CALL cancel_registration(6, 5, '2021-07-01', 1);
+CALL cancel_registration(8, 2, '2021-07-01', 2);
+CALL cancel_registration(3, 1, '2021-06-01', 1);
+
+CALL cancel_registration(8, 10, '2021-06-01', 2);
+CALL cancel_registration(10, 8, '2021-07-01', 1);
+CALL cancel_registration(1, 8, '2021-07-01', 3);
+CALL cancel_registration(6, 8, '2021-07-01', 3);
+CALL cancel_registration(9, 10, '2021-06-01', 3);
+CALL cancel_registration(10, 10, '2021-06-01', 1);
+CALL cancel_registration(10, 9, '2021-08-01', 1);
 
 COMMIT;

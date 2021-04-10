@@ -48,7 +48,7 @@ create table Customers (
   email text,
   /* Assume that user is from Singapore, starting digit must be 6, 8, 9, 8 digit number, check in range*/
   phone_num integer,
-  credit_card_num text unique not null references Credit_Cards deferrable initially deferred
+  credit_card_num text unique not null references Credit_Cards on update cascade deferrable initially deferred
 );
 
 /* (CORRECT) */
@@ -758,62 +758,6 @@ If sid is cancels in in buys --> redeem_amt is > 0 and package_credit is null (K
 /* (CORRECT) */
 /* num_remaining_redemptions not null because any transaction in Buys has already occurred */
 
-CREATE OR REPLACE FUNCTION cancels_updates_related_tables_func()
-RETURNS TRIGGER AS $$
-DECLARE
-    is_late_cancellation BOOLEAN;
-    _package_id INTEGER;
-BEGIN
-    IF (NEW.package_credit IS NOT NULL AND NEW.refund_amt IS NOT NULL) OR (NEW.package_credit IS NULL AND NEW.refund_amt IS NULL) THEN
-        RAISE EXCEPTION 'Only one of package credit and refund amount must be null in the Cancels table';
-    END IF;
-
-    SELECT (session_date - NEW.cancel_date) < 7 INTO is_late_cancellation
-    FROM Course_Offering_Sessions
-    WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id;
-
-    /* Delete from Redeems */
-    /* Change package amount to 0 if < 7 days before, otherwise update Buys if >= 7 days before */
-    IF NEW.package_credit IS NOT NULL THEN
-        /* Can use (sid, launch_date, course_id) (i.e. primary key of Course_Offering_Sessions) to delete from Redeems since
-           a customer can only register for one course at a time */
-        SELECT package_id INTO _package_id
-        FROM Redeems
-        WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
-
-        DELETE
-        FROM Redeems
-        WHERE sid = NEW.sid AND launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id AND package_id = _package_id;
-        
-        IF is_late_cancellation = TRUE THEN
-            NEW.package_credit := 0;
-        END IF;
-
-        UPDATE Buys
-        SET num_remaining_redemptions = num_remaining_redemptions + NEW.package_credit
-        WHERE package_id = _package_id AND cust_id = NEW.cust_id;
-    END IF;
-
-    /* Delete from Registers */
-    /* Change refund amount if < 7 days before */
-    IF NEW.refund_amt IS NOT NULL THEN
-        DELETE
-        FROM Registers
-        WHERE launch_date = NEW.launch_date AND course_id = NEW.course_id AND cust_id = NEW.cust_id;
-
-        IF is_late_cancellation = TRUE THEN
-            NEW.refund_amt := 0.0;
-        END IF;
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER cancels_updates_related_tables
-BEFORE INSERT ON Cancels
-FOR EACH ROW EXECUTE FUNCTION cancels_updates_related_tables_func();
-
 /* Trigger (20) Every course_offering_session needs to exist in conducts relation (Siddarth)*/
 CREATE OR REPLACE FUNCTION check_all_course_offering_session_is_being_conducted()
 RETURNS TRIGGER AS $$
@@ -990,7 +934,7 @@ BEGIN
     IF is_session_redeemed_already THEN
         RAISE EXCEPTION 'Course offering session is already redeemed.';
     ELSIF is_conflicting_with_another_registered_session THEN
-        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registerd course offering session';
+        RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another registered course offering session';
     ELSIF is_conflicting_with_another_redeemed_session THEN
         RAISE EXCEPTION 'Session date and time range of course offering session conflicts with another redeemed course offering sessions';
     ELSE
@@ -1832,3 +1776,31 @@ CREATE CONSTRAINT TRIGGER delete_course_offering_trigger
 AFTER DELETE ON Course_Offerings
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION delete_course_offering_func();
+
+/* Trigger (52) Ensure redemption date cannot be later than registration deadline and before launch date of course offering (Siddarth) */
+CREATE OR REPLACE FUNCTION ensure_redemption_date_constraints()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_offering_registration_deadline DATE;
+    course_offering_launch_date DATE;
+BEGIN
+
+    SELECT registration_deadline, launch_date INTO course_offering_registration_deadline, course_offering_launch_date
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings
+    WHERE sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    IF NEW.redemption_date > course_offering_registration_deadline THEN
+        RAISE EXCEPTION 'Cannot redeeem for a course offering session as the redemption date is later than the registration deadline.';
+    ELSIF NEW.redemption_date < course_offering_launch_date THEN
+        RAISE EXCEPTION 'Cannot redeem for a course offering session as the redemption date is earlier than course offering launch date.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verify_registration_date_valid
+BEFORE INSERT OR UPDATE ON Redeems
+FOR EACH ROW EXECUTE FUNCTION ensure_redemption_date_constraints();
