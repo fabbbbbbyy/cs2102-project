@@ -359,17 +359,18 @@ ORDER BY cust_id, session_date;
 SELECT * FROM get_available_course_offerings();
 
 /* Set 2: Verify that the function gives accurate results when number of sessions registered increases (Passing) */
-INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(10, '2021-06-02', 1, '2021-06-01', 1);
 
 /* Set 3: Verify that the function gives accurate results when number of sessions registered decreases (Passing) */
-INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
-CALL cancel_registration(8, 1, '2021-06-01', 1);
+INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(10, '2021-06-02', 1, '2021-06-01', 1);
+CALL cancel_registration(10, 1, '2021-06-01', 1);
 
 /* Set 4: Verify that the function gives accurate results when number of sessions redeemed increases (Passing) */
-INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-07-01', 2, '2021-06-01', 10, 9, 3, '2021-04-02');
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-06-15', 2, '2021-06-01', 10, 9, 3, '2021-04-02');
 
 /* Set 5: Verify that the function gives accurate results when number of sessions redeemed decreases (Passing) */
-CALL cancel_registration(8, 10, '2021-06-01', 2);
+INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-06-15', 2, '2021-06-01', 10, 9, 3, '2021-04-02');
+CALL cancel_registration(9, 10, '2021-06-01', 2);
 
 /* Set 6: Verify that the function gives accurate results when offerings have remaining seats which decreased 0 (Passing) */
 /* Add and edit preprocessing data in data.sql */
@@ -380,7 +381,6 @@ INSERT INTO Conducts(rid, instructor_id, sid, course_area_name, launch_date, cou
 
 INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 1, '2021-08-01', 9, 1, 1, '2021-04-02');
 INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(2, '2021-08-02', 2, '2021-08-01', 9);
-INSERT INTO Redeems(redemption_date, sid, launch_date, course_id, cust_id, package_id, purchase_date) values('2021-08-01', 3, '2021-08-01', 9, 3, 1, '2021-04-02');
 
 /* Function (16) get_available_course_sessions (Kevin) */
 
@@ -483,7 +483,7 @@ CALL update_course_session(2, 10, '2021-03-25', 1);
 CALL update_course_session(8, 10, '2021-06-01', 2);
 
 /* Set 5: Verify that exception is thrown if customer's new session clashes with another session which he is already in (Passing) */
-CALL update_course_session(8, 10, '2021-06-01', 3);
+CALL update_course_session(8, 9, '2021-08-01', 1);
 
 /* Set 6: Verify that exception is thrown if customer is invalid (Passing) */
 CALL update_course_session(888, 2, '2021-07-01', 2);
@@ -567,7 +567,6 @@ CALL remove_session(3, '2021-08-01', 2);
 /* Set 2: Verify that exception is thrown when removing a session that has commenced (Passing) */
 CALL remove_session(1, '2021-01-01', 1);
 CALL remove_session(2, '2021-02-01', 1);
-CALL remove_session(3, '2021-03-01', 1);
 
 /* Set 3: Verify that exception is thrown when removing an invalid session (Passing) */
 CALL remove_session(3, '2021-03-01', 5);
