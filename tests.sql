@@ -550,9 +550,6 @@ CALL update_room(8, '2021-01-01', 1, 1);
 
 /* Function (23) remove_session (Gerren) */
 
-/* Pre-processing */
-INSERT INTO Registers(cust_id, register_date, sid, launch_date, course_id) VALUES(8, '2021-06-02', 1, '2021-06-01', 1);
-
 /* Useful visualisation queries */
 SELECT *
 FROM Course_Offering_Sessions
