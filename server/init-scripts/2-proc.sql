@@ -1869,6 +1869,7 @@ With
 	(
 		SELECT eid, employee_name, count(distinct course_area_name) as num_of_course_areas_managed, count(course_id) as num_of_course_offerings_managed
 		FROM Managers NATURAL JOIN Employees NATURAL LEFT OUTER JOIN Course_Areas NATURAL LEFT OUTER JOIN Courses NATURAL LEFT OUTER JOIN Course_Offerings
+    WHERE depart_date IS NULL or (date_part('year', depart_date::timestamp) = date_part('year', now()))
 		GROUP BY eid, employee_name
 	)
 	
