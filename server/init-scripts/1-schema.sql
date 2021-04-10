@@ -1832,3 +1832,31 @@ CREATE CONSTRAINT TRIGGER delete_course_offering_trigger
 AFTER DELETE ON Course_Offerings
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION delete_course_offering_func();
+
+/* Trigger (52) Ensure redemption date cannot be later than registration deadline and before launch date of course offering (Siddarth) */
+CREATE OR REPLACE FUNCTION ensure_redemption_date_constraints()
+RETURNS TRIGGER AS $$
+DECLARE
+    course_offering_registration_deadline DATE;
+    course_offering_launch_date DATE;
+BEGIN
+
+    SELECT registration_deadline, launch_date INTO course_offering_registration_deadline, course_offering_launch_date
+    FROM Course_Offering_Sessions NATURAL JOIN Course_Offerings
+    WHERE sid = NEW.sid
+    and launch_date = NEW.launch_date
+    and course_id = NEW.course_id;
+
+    IF NEW.redemption_date > course_offering_registration_deadline THEN
+        RAISE EXCEPTION 'Cannot redeeem for a course offering session as the redemption date is later than the registration deadline.';
+    ELSIF NEW.redemption_date < course_offering_launch_date THEN
+        RAISE EXCEPTION 'Cannot redeem for a course offering session as the redemption date is earlier than course offering launch date.';
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verify_registration_date_valid
+BEFORE INSERT OR UPDATE ON Redeems
+FOR EACH ROW EXECUTE FUNCTION ensure_redemption_date_constraints();
