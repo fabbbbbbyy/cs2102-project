@@ -1693,19 +1693,6 @@ AFTER DELETE ON Registers
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION delete_registers_func();
 
-/* Trigger (48) Prevent deletion of a record in cancels. */
-CREATE OR REPLACE FUNCTION delete_cancels_func()
-RETURNS TRIGGER AS $$
-BEGIN
-  RAISE EXCEPTION 'Rollbacks on Cancel records are disallowed due to the possible misuse of such an operation.';
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE CONSTRAINT TRIGGER delete_cancels_trigger
-AFTER DELETE ON Cancels
-DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION delete_cancels_func();
-
 /* Trigger (49) Prevent deletion of a session that has already been conducted. */
 CREATE OR REPLACE FUNCTION delete_conducts_func()
 RETURNS TRIGGER AS $$
