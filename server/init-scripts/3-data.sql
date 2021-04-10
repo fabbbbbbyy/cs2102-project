@@ -4,6 +4,8 @@ SET CONSTRAINTS check_all_course_offering_session_is_being_conducted_trigger DEF
 SET CONSTRAINTS ensure_employee_either_part_time_or_full_time_employee DEFERRED;
 SET CONSTRAINTS customer_one_session_from_same_course_offering_verification DEFERRED;
 SET CONSTRAINTS delete_registers_trigger DEFERRED;
+SET CONSTRAINTS add_part_time_employee_pay_slips_trigger DEFERRED;
+SET CONSTRAINTS add_full_time_employee_pay_slips_trigger DEFERRED;
 
 call add_customer('Ronaldo', 'Santos Street 5', 99999999, 'ronaldo@hotmail.com', '5500000000000005','2021-10-10', '898');
 call add_customer('Messi', 'Barcelona Road', 99998888, 'leomessi@hotmail.com', '5500000000000006','2021-11-10', '888');
@@ -29,10 +31,10 @@ insert into Course_Packages(course_package_name, num_free_registrations, price, 
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 11', 11, 35.0, '2021-04-24', '2021-08-24');
 insert into Course_Packages(course_package_name, num_free_registrations, price, sale_start_date, sale_end_date) values('Special 12', 12, 35.0, '2021-03-24', '2021-03-29');
 
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Boulevard', null, 'emily@gmail.com', '2005-05-17', 'Emily', '67892345');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jungle Swamp', null, 'brian@live.com', '2013-08-09', 'Brian', '88112233');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Hill', null, 'mabel@gmail.com', '2014-12-25', 'Mabel', '65689231');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Swamp Jungle', null, 'abel@live.com', '2000-02-06', 'Abel', '88456781');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Boulevard', null, 'emily@gmail.com', '2020-11-17', 'Emily', '67892345');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Jungle Swamp', null, 'brian@live.com', '2020-11-09', 'Brian', '88112233');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain Hill', null, 'mabel@gmail.com', '2020-12-25', 'Mabel', '65689231');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Swamp Jungle', null, 'abel@live.com', '2020-12-06', 'Abel', '88456781');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Mountain View', null, 'chris@yahoo.com', '2020-03-04', 'Chris', '89672345');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Kovan', null, 'tom@yahoo.com', '2020-05-04', 'Tom', '99889988');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Serangoon', null, 'betty@yahoo.com', '2020-07-04', 'Betty', '99119911');
@@ -40,10 +42,10 @@ insert into Employees(address, depart_date, email, join_date, employee_name, pho
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Bishan', null, 'julius@yahoo.com', '2020-07-22', 'Julius', '99559955');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Paya Lebar', null, 'connie@yahoo.com', '2020-12-22', 'Connie', '99559988');
 
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Potong Pasir', null, 'muthu@gmail.com', '2005-05-17', 'Muthu', '67892345');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Dhoby Ghaut', null, 'ali@live.com', '2013-08-09', 'Ali', '88112233');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Harbourfront', null, 'baba@gmail.com', '2014-12-25', 'Baba', '65689231');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Chinatown', null, 'xiaole@live.com', '2000-02-06', 'Xiao Le', '88456781');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Potong Pasir', null, 'muthu@gmail.com', '2020-11-17', 'Muthu', '67892345');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Dhoby Ghaut', null, 'ali@live.com', '2020-08-09', 'Ali', '88112233');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Harbourfront', null, 'baba@gmail.com', '2020-12-25', 'Baba', '65689231');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Chinatown', null, 'xiaole@live.com', '2020-02-06', 'Xiao Le', '88456781');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Orchard', null, 'chenchen@yahoo.com', '2020-03-04', 'Chen Chen', '89672345');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Punggol', null, 'lulu@yahoo.com', '2020-05-04', 'Lu Lu', '99889988');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Toa Payoh', null, 'ahmad@yahoo.com', '2020-07-04', 'Ahmad', '99119911');
@@ -51,10 +53,10 @@ insert into Employees(address, depart_date, email, join_date, employee_name, pho
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Sixth Avenue', null, 'firdaus@yahoo.com', '2020-07-22', 'Firdaus', '99559955');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Khatib', null, 'farhan@yahoo.com', '2020-12-22', 'Farhan', '99559988');
 
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Ang Mo Kio', null, 'mueller@gmail.com', '2005-05-17', 'Mueller', '67892345');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Pasir Panjang', null, 'guzman@live.com', '2013-08-09', 'Guzman', '88112233');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Tampines', null, 'alberto@gmail.com', '2014-12-25', 'Alberto', '65689231');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Changi', null, 'xhaka@live.com', '2000-02-06', 'Xhaka', '88456781');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Ang Mo Kio', null, 'mueller@gmail.com', '2020-05-17', 'Mueller', '67892345');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Pasir Panjang', null, 'guzman@live.com', '2020-08-09', 'Guzman', '88112233');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Tampines', null, 'alberto@gmail.com', '2020-12-25', 'Alberto', '65689231');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Changi', null, 'xhaka@live.com', '2020-02-06', 'Xhaka', '88456781');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Bedok', null, 'rooney@yahoo.com', '2020-03-04', 'Rooney', '89672345');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Kembangan', null, 'bernado@yahoo.com', '2020-05-04', 'Bernardo', '99889988');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Paya Lebar', null, 'cascillas@yahoo.com', '2020-07-04', 'Cascillas', '99119911');
@@ -62,10 +64,10 @@ insert into Employees(address, depart_date, email, join_date, employee_name, pho
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Redhill', null, 'mona@yahoo.com', '2020-07-22', 'Mona', '99559955');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Tiong Avenue', null, 'ramos@yahoo.com', '2020-12-22', 'Ramos', '99559988');
 
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Hillview', null, 'wawa@gmail.com', '2005-05-17', 'Lala', '67892345');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Cashew', null, 'mimi@live.com', '2013-08-09', 'Mimi', '88112233');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Beauty World', null, 'momo@gmail.com', '2014-12-25', 'Momo', '65689231');
-insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Tan Kah Kee', null, 'dada@live.com', '2000-02-06', 'Dada', '88456781');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Hillview', null, 'wawa@gmail.com', '2020-05-17', 'Lala', '67892345');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Cashew', null, 'mimi@live.com', '2020-08-09', 'Mimi', '88112233');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Beauty World', null, 'momo@gmail.com', '2020-12-25', 'Momo', '65689231');
+insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Tan Kah Kee', null, 'dada@live.com', '2020-02-06', 'Dada', '88456781');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Stevens', null, 'didi@yahoo.com', '2020-03-04', 'Didi', '89672345');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Bukit Gombak', null, 'bibi@yahoo.com', '2020-05-04', 'Bibi', '99889988');
 insert into Employees(address, depart_date, email, join_date, employee_name, phone_num) values('Woodlands', null, 'baba@yahoo.com', '2020-07-04', 'Baba', '99119911');
@@ -513,7 +515,5 @@ CALL cancel_registration(10, 8, '2021-07-01', 1);
 CALL cancel_registration(1, 8, '2021-07-01', 3);
 CALL cancel_registration(6, 8, '2021-07-01', 3);
 CALL cancel_registration(9, 10, '2021-06-01', 3);
-CALL cancel_registration(10, 10, '2021-06-01', 1);
-CALL cancel_registration(10, 9, '2021-08-01', 1);
 
 COMMIT;

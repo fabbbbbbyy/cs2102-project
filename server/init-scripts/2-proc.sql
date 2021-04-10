@@ -1473,7 +1473,9 @@ last_work_day integer;
 num_days_of_current_month integer;
 BEGIN
     SELECT CURRENT_DATE into current_date;
-
+    IF EXTRACT(DAY FROM current_date) <> EXTRACT(DAY FROM(date_trunc('month', current_date::date) + interval '1 month' - interval '1 day')::date) THEN
+      RAISE EXCEPTION 'It is not the last day of the month, so we are unable to pay the Employees yet.';
+    END IF;
     OPEN cursF;
     LOOP
         FETCH cursF INTO rF;
